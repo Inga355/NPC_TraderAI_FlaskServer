@@ -4,6 +4,7 @@ import sqlite3
 import openai
 import os
 
+
 app = Flask(__name__)
 
 # OpenAI API Key
@@ -19,6 +20,12 @@ def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+# API Route: Test Endpoint
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Flask Server is running!"})
 
 
 
