@@ -28,4 +28,15 @@ def home():
     return jsonify({"message": "Flask Server is running!"})
 
 
+# API Route: Get NPC Inventory
+@app.route("/npc/<int:npc_id>/inventory", methods=["GET"])
+def get_npc_inventory(npc_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_name, quantity FROM NPC_Inventory WHERE npc_id = ?", (npc_id,))
+    items = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(item) for item in items])
+
+
 
