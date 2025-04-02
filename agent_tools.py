@@ -33,6 +33,12 @@ def give_item_tool(item_name: str) -> str:
         return f"The NPC cannot give {quantity} '{item}' because it is not available."
 
 
+def add_item_tool(inut_text: str) -> str:
+    item, quantity = parse_item_and_quantity(inut_text)
+    inventory.add_item(item, quantity)
+    return f"The NPC received {quantity} '{item}'."
+
+
 def list_inventory_tool(_: str = "") -> str:
     items = inventory.get_all_items()
     if not items:
@@ -51,6 +57,11 @@ tools = [
         name="give_item",
         func=give_item_tool,
         description="Removes one of the specified item from the NPC inventory. Input is the item name."
+    ),
+    Tool(
+        name="add_item",
+        func=add_item_tool,
+        description="Adds a given quantity of an item to the NPC inventory. Input format: 'item, quantity'."
     ),
     Tool(
         name="list_inventory",
