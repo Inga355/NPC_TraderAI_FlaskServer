@@ -11,7 +11,6 @@ import openai
 load_dotenv()
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_KEY = os.getenv("PINECONE_KEY")
-PINECONE_ENV = "us-east1"
 
 openai.api_key = OPENAI_KEY
 
@@ -22,7 +21,6 @@ print(response)
 # 1.Initialisierung
 memory = NPCMemory(
     pinecone_key=PINECONE_KEY,
-    pinecone_env=PINECONE_ENV,
     index_name="npc-core-test"
 )
 

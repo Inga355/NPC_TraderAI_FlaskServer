@@ -13,7 +13,7 @@ client = OpenAI(api_key=openai_key)
 
 
 class NPCMemory:
-    def __init__(self, pinecone_key, pinecone_env, index_name="npc-memory"):
+    def __init__(self, pinecone_key, index_name="npc-memory"):
         pc = Pinecone(api_key= pinecone_key)
 
         self.index_name = index_name
@@ -24,7 +24,7 @@ class NPCMemory:
                 metric='cosine',
                 spec=ServerlessSpec(
                     cloud='aws',
-                    region=pinecone_env
+                    region='us-east1'
                 )
             )
         self.index = pc.Index(index_name)
