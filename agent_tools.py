@@ -6,18 +6,31 @@ from npc_inventory import NPCInventory
 inventory = NPCInventory(db_path="npc_inventory.db")
 
 
+def parse_item_and_quantity(text: str):
+    parts = text.split(",")
+    item = parts[0].strip()
+    quantity = int(parts[1].strip()) if len(parts) > 1 else 1
+    return item, quantity
+
+
 # Define functional wrappers
-def has_item_tool(item_name: str) -> str:
-    result = inventory.has_item(item_name)
-    return f"Yes, the NPC has '{item_name}'." if result else f"No, the NPC does not have '{item_name}'."
+def has_item_tool(input_text: str) -> str:
+    item, quantity = parse_item_and_quantity(input_text)
+    result = inventory.has_item(item, quantity)
+    return (
+        f"Yes, the NPC has at least {quantity} '{item}'."
+        if result else
+        f"No, the NPC does not have {quantity} '{item}'."
+    )
 
 
 def give_item_tool(item_name: str) -> str:
-    if inventory.has_item(item_name):
-        inventory.remove_item(item_name)
-        return f"The NPC gave away one '{item_name}'."
+    item, quantity = parse_item_and_quantity(input_text)
+    if inventory.has_item(item, quantity):
+        inventory.remove_item(item, quantity)
+        return f"The NPC gave away {quantity} '{item}'."
     else:
-        return f"The NPC cannot give '{item_name}' because it is not available."
+        return f"The NPC cannot give {quantity} '{item}' because it is not available."
 
 
 def list_inventory_tool(_: str = "") -> str:
