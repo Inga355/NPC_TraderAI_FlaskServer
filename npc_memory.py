@@ -1,27 +1,41 @@
 import openai
-import pinecone
+from openai import OpenAI, api_key
+from pinecone import Pinecone, ServerlessSpec
 import uuid
-from datetime import datetime
-from app.py import API_KEY, PINECONE_KEY
-from openai import api_key
+from datetime import datetime, timezone
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+openai_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=openai_key)
 
 
 class NPCMemory:
-    def __init__(self, openai_key, pinecone_key, pinecone_env, index_name="npc-memory"):
-        openai.api_key = API_KEY
-        pinecone.init(api_key= PINECONE_KEY, environment=pinecone_env)
+    def __init__(self, pinecone_key, pinecone_env, index_name="npc-memory"):
+        pc = Pinecone(api_key= pinecone_key)
 
         self.index_name = index_name
-        if index_name not in pinecone.list_indexes():
-            pinecone.create_index(index_name, dimension=1536)
-        self.index = pinecone.Index(index_name)
+        if index_name not in pc.list_indexes().names():
+            pc.create_index(
+                name=index_name,
+                dimension=1536,
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region=pinecone_env
+                )
+            )
+        self.index = pc.Index(index_name)
 
     def embed_text(self, text):
-        response = openai.Embedding.create(
+        response = client.embeddings.create(
             input=[text],
-            model="text-embedding-ada-002"
+            model="text-embedding-3-small"
         )
-        return response["data"][0]["embedding"]
+        embedding = response.data[0].embedding
+        return embedding
 
     def save_memory(self, text, role="npc", session_id="default"):
         vector = self.embed_text(text)
@@ -32,7 +46,7 @@ class NPCMemory:
                     "text": text,
                     "role": role,
                     "session_id": session_id,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 }
             )
         ])

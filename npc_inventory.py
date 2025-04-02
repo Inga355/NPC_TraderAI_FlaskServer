@@ -1,7 +1,7 @@
 import sqlite3
 
 
-class NCPInventory:
+class NPCInventory:
     def __init__(self, db_path="npc_inventory.db"):
         self.conn = sqlite3.connect(db_path)
         self._create_table()
@@ -12,11 +12,11 @@ class NCPInventory:
                 CREATE TABLE IF NOT EXISTS inventory
                     (
                     item TEXT PRIMARY KEY,
-                    quantitiy INTEGER
+                    quantity INTEGER
                     )
             """)
 
-    def add_item(self, item, quantity=1):
+    def add_item(self, item, quantity):
         with self.conn:
             self.conn.execute("""
                 INSERT INTO inventory(item, quantity)
@@ -33,7 +33,7 @@ class NCPInventory:
 
     def has_item(self, item):
         cur = self.conn.cursor()
-        cur.execute("SELECT quantity FROM inventory WHERE item = ?", (item))
+        cur.execute("SELECT quantity FROM inventory WHERE item = ?", (item,))
         result = cur.fetchone()
         return result is not None and result[0] > 0
 
