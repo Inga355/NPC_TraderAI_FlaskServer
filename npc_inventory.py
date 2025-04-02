@@ -31,11 +31,11 @@ class NPCInventory:
                 WHERE item = ? AND quantity >= ?
             """, (quantity, item, quantity))
 
-    def has_item(self, item):
+    def has_item(self, item, quantity=1):
         cur = self.conn.cursor()
         cur.execute("SELECT quantity FROM inventory WHERE item = ?", (item,))
         result = cur.fetchone()
-        return result is not None and result[0] > 0
+        return result is not None and result[0] >= quantity
 
     def get_all_items(self):
         cur = self.conn.cursor()
