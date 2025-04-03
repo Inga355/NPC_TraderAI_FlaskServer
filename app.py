@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from flask_cors import CORS
+from npc_agent import ask_npc
 import sqlite3
 import openai
 import os
 
 
 app = Flask(__name__)
+
 
 
 # OpenAI API Key

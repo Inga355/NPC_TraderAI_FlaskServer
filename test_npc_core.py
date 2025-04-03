@@ -1,6 +1,6 @@
-from npc_memory import NPCMemory
+from archive.npc_memory import NPCMemory
 from npc_inventory import NPCInventory
-from npc_controller import NPCController
+from archive.npc_controller import NPCController
 import time
 import os
 from dotenv import load_dotenv

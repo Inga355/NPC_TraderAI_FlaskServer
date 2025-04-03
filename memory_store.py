@@ -1,11 +1,13 @@
 import os
 import openai
-import pinecone
+from pinecone import Pinecone
+from pinecone import ServerlessSpec
 from dotenv import load_dotenv
-from langchain.vectorstores import Pinecone as LangchainPinecone
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_community.vectorstores import Pinecone as LangchainPinecone
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.memory import VectorStoreRetrieverMemory
 from test_npc_core import memory
+
 
 # Setup environment
 load_dotenv()
@@ -33,7 +35,7 @@ if INDEX_NAME not in pc.list_indexes():
     )
 
 # Connect to index
-vectorstore = LangchainPinecone.from_existing_idex(
+vectorstore = LangchainPinecone.from_existing_index(
     index_name=INDEX_NAME,
     embedding=embedding
 )
