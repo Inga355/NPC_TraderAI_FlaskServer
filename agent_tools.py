@@ -24,7 +24,7 @@ def has_item_tool(input_text: str) -> str:
     )
 
 
-def give_item_tool(item_name: str) -> str:
+def give_item_tool(input_text: str) -> str:
     item, quantity = parse_item_and_quantity(input_text)
     if inventory.has_item(item, quantity):
         inventory.remove_item(item, quantity)
@@ -33,8 +33,8 @@ def give_item_tool(item_name: str) -> str:
         return f"The NPC cannot give {quantity} '{item}' because it is not available."
 
 
-def add_item_tool(inut_text: str) -> str:
-    item, quantity = parse_item_and_quantity(inut_text)
+def add_item_tool(input_text: str) -> str:
+    item, quantity = parse_item_and_quantity(input_text)
     inventory.add_item(item, quantity)
     return f"The NPC received {quantity} '{item}'."
 

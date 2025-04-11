@@ -1,6 +1,6 @@
 from langchain_community.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, AgentType
-from memory_store import get_memory, memory
+from memory_store import get_memory
 from agent_tools import tools
 from dotenv import load_dotenv
 import os
@@ -11,8 +11,8 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 llm = ChatOpenAI(
     temperature=0.7,
-    open_api_key=OPENAI_API_KEY,
-    model_name="gpt-4o-mini"
+    openai_api_key=OPENAI_API_KEY,
+    model_name="gpt-4o"
 )
 
 # Init memory from vector database

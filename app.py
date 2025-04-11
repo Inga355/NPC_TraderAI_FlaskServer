@@ -1,39 +1,21 @@
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from npc_agent import ask_npc
-import sqlite3
-import openai
 import os
+from openai import OpenAI
+
+app = Flask(__name__, static_folder='testfrontend')
+CORS(app)
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-app = Flask(__name__)
-
-
-
-# OpenAI API Key
-load_dotenv()
-API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = API_KEY
-
-
-# Database connection
-DB_NAME = "database.db"
-
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-# API Route: Test Endpoint
-@app.route("/", methods=["GET"])
+# API Route: Serve the chat interface
+@app.route("/npc/chat")
 def home():
-    return jsonify({"message": "Flask Server is running!"})
+    return send_from_directory('testfrontend', 'chatwindow.html')
 
 
-# API Route: Get NPC Inventory
+"""# API Route: Get NPC Inventory
 @app.route("/npc/<int:npc_id>/inventory", methods=["GET"])
 def get_npc_inventory(npc_id):
     conn = get_db_connection()
@@ -41,41 +23,27 @@ def get_npc_inventory(npc_id):
     cursor.execute("SELECT item_name, quantity FROM NPC_Inventory WHERE npc_id = ?", (npc_id,))
     items = cursor.fetchall()
     conn.close()
-    return jsonify([dict(item) for item in items])
-
+    return jsonify([dict(item) for item in items])"""
+#will be later fetchd from database
+npc_role = "You are a sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly in German language and talk like a pirate. If someone call you stupid, respond angry until you get a 'sorry'."
 
 # API Route: Chat with NPC (OpenAI)
-@app.route("/npc/<int:npc_id>/chat", methods=["POST"])
-def chat_with_npc(npc_id):
-    data = request.json
-    player_message = data.get("message", "")
+@app.route("/npc/chat", methods=["POST"])
+def npc_chat():
+    message = request.form.get("userpromt", "")
 
-    # Fetch NPC role
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT role FROM NPCs WHERE npc_id = ?", (npc_id,))
-    npc = cursor.fetchone()
-    conn.close()
-
-    if not npc:
-        return jsonify({"error": "NPC not found"}), 404
-
-    npc_role = npc["role"]
+    if not message:
+        return "Please provide a message", 400
 
     # Generate AI response
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": f"You are an NPC, a {npc_role}. Respond accordingly."},
-            {"role": "user", "content": player_message}
-        ],
-        temperature=0.7,
-        max_tokens=512
+    #response = ask_npc(message)
+    response = client.responses.create(
+        model="gpt-4o",
+        instructions=f"{npc_role}",
+        input=f"{message}"  
     )
-    npc_response = response["choices"][0]["message"]["content"]
-
-    return jsonify({"npc_response": npc_response})
+    return response.output_text
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5000, debug=True)

@@ -1,28 +1,27 @@
+from openai import OpenAI
 import os
-import openai
 from pinecone import Pinecone
 from pinecone import ServerlessSpec
-from dotenv import load_dotenv
 from langchain_community.vectorstores import Pinecone as LangchainPinecone
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
+#from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.memory import VectorStoreRetrieverMemory
-from test_npc_core import memory
+from dotenv import load_dotenv
 
 
 # Setup environment
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 INDEX_NAME = "npc-langchain-memory"
 
 # Initalize OpenAi and Pinecone
-client = OpenAI(api_key=OPENAI_API_KEY)
-pc = Pinecone(api_key=PINECONE_API_KEY)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 # Embedding model
-embedding = OpenAIEmbeddings(opanai_api_key=OPENAI_API_KEY)
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+index = pc.Index(INDEX_NAME)
+print(embeddings)
 
-# Create index if it does not exist
+"""# Create index if it does not exist
 if INDEX_NAME not in pc.list_indexes():
     pc.create_index(
         name=INDEX_NAME,
@@ -32,13 +31,10 @@ if INDEX_NAME not in pc.list_indexes():
             cloud='aws',
             region='us-east1'
         )
-    )
+    )"""
 
 # Connect to index
-vectorstore = LangchainPinecone.from_existing_index(
-    index_name=INDEX_NAME,
-    embedding=embedding
-)
+vectorstore = LangchainPinecone(index, embedding=embeddings)
 
 # Setup LangChain memory using retriever
 memory = VectorStoreRetrieverMemory(
