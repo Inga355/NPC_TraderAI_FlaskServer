@@ -1,49 +1,57 @@
-from openai import OpenAI
 import os
-from pinecone import Pinecone
-from pinecone import ServerlessSpec
-from langchain_community.vectorstores import Pinecone as LangchainPinecone
-from langchain_openai import OpenAIEmbeddings
-#from langchain_community.embeddings import OpenAIEmbeddings
-from langchain.memory import VectorStoreRetrieverMemory
-from dotenv import load_dotenv
+import chromadb
+import uuid
+from datetime import datetime
+from openai import OpenAI
 
 
-# Setup environment
-INDEX_NAME = "npc-langchain-memory"
+# Creating a persistent Client
+client = chromadb.PersistentClient(path="vectordb")
 
-# Initalize OpenAi and Pinecone
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+# Creates the collecting if not yet exists or get the collection from the client
+collection = client.get_or_create_collection(name="test_collection2")
+
+def add_memory(text, role):
+    """
+    Adds the NPC-Answer to the database.
+    :param text: the answer that is displayed to the user from OpenAi Api or the user prompt
+    :param role: 'user' or 'assistant'
+    :return: None
+    """
+    id = str(uuid.uuid4())
+    collection.add(
+        documents=[text],
+        metadatas=[{"created": str(datetime.now()), "role": f"{role}"}],
+        ids=[id]
+    )
+    print("added to memory")
+
+
+def get_memory_user(text):
+    results = collection.query(
+        query_texts=[text],
+        n_results=10,
+        where={"role": "user"}
+    )
+    return results["documents"][0]
+
+
+def get_memory_assistant(text):
+    results = collection.query(
+        query_texts=[text],
+        n_results=10,
+        where={"role": "assistant"}
+    )
+    return results["documents"][0]
+
+
+
+# Initalize OpenAi
+#client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 # Embedding model
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-index = pc.Index(INDEX_NAME)
-print(embeddings)
-
-"""# Create index if it does not exist
-if INDEX_NAME not in pc.list_indexes():
-    pc.create_index(
-        name=INDEX_NAME,
-        dimension=1536,
-        metric='cosine',
-        spec=ServerlessSpec(
-            cloud='aws',
-            region='us-east1'
-        )
-    )"""
-
-# Connect to index
-vectorstore = LangchainPinecone(index, embedding=embeddings)
-
-# Setup LangChain memory using retriever
-memory = VectorStoreRetrieverMemory(
-    retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
-    memory_key="chat_history"
-)
-
-# Exportable memory instance
-def get_memory():
-    return memory
-
+#embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+#index = pc.Index(INDEX_NAME)
+#print(embeddings)
 
