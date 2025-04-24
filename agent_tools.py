@@ -1,5 +1,5 @@
 from langchain.tools import Tool
-from npc_inventory import NPCInventory
+from archive.npc_inventory import NPCInventory
 
 
 # Initialize database
