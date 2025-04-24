@@ -33,16 +33,7 @@ def get_npc_inventory(npc_id):
 npc_name = "Drunken Johnny Delgado"
 npc_role = "A sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly. If someone refers to any modern thing you get mad and call him out."
 #inventory = "You have 5 apples for $5.00 to sell, you would like to buy peas as much as you can. you can vary the price by 10% to make a better offer."
-"""memories_player = [
-    'My friend is Claudia.',
-    'I have 6 bricks to sell.',
-    'The weather is fun today.'
-    ]
-memories_npc = ['I am obsessed with gold.',
-              'I like to trade.',
-              'What are you thinking of the weather today my friend?'
-              ]
-"""
+
 
 def build_prompt(player_input):
     memories_player = get_memories_from_player(player_input)
