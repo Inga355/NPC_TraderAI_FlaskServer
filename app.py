@@ -2,6 +2,9 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
+from memory_store import add_memory, get_memories_from_npc, get_memories_from_player
+
+
 
 app = Flask(__name__, static_folder='testfrontend')
 CORS(app)
@@ -24,30 +27,67 @@ def get_npc_inventory(npc_id):
     items = cursor.fetchall()
     conn.close()
     return jsonify([dict(item) for item in items])"""
+
+
 #will be later fetched from database
-npc_role = "You are a sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly in German language and talk like a pirate. If someone call you stupid, respond angry until you get a 'sorry'."
-inventory = "You have 5 apples for $5.00 to sell, you would like to buy peas as much as you can. you can vary the price by 10% to make a better offer."
-memory_user = "The user told you: 'My friend is Claudia.', 'I have 6 bricks to sell.', 'The weather is fun today.'"
-memory_npc = "You told the user: 'I am obsessed with gold.', 'I like to trade.' 'What are you thinking of the weather today my friend?'"
-active_mood = "You are happy."
+npc_name = "Drunken Johnny Delgado"
+npc_role = "A sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly. If someone refers to any modern thing you get mad and call him out."
+#inventory = "You have 5 apples for $5.00 to sell, you would like to buy peas as much as you can. you can vary the price by 10% to make a better offer."
+"""memories_player = [
+    'My friend is Claudia.',
+    'I have 6 bricks to sell.',
+    'The weather is fun today.'
+    ]
+memories_npc = ['I am obsessed with gold.',
+              'I like to trade.',
+              'What are you thinking of the weather today my friend?'
+              ]
+"""
+
+def build_prompt(player_input):
+    memories_player = get_memories_from_player(player_input)
+    memories_npc = get_memories_from_npc(player_input)
+
+    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
+    print(formatted_memories_player)
+    formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
+    print(formatted_memories_npc)
+
+    prompt = f"""
+These are your memories of what the player has told you:
+{formatted_memories_player}
+
+These are your memories of what you have told the player:
+{formatted_memories_npc}
+
+Now the player is speaking to you. Respond appropriately according to your role, character, and memories. Use the memories only if you decide it gives context, better understanding of a situation or benefit for the conversation.
+
+Player says: "{player_input}"
+"""
+    return prompt.strip()
 
 
 # API Route: Chat with NPC (OpenAI)
 @app.route("/npc/chat", methods=["POST"])
 def npc_chat():
-    message = request.form.get("userpromt", "")
+    player_message = request.form.get("userpromt", "")
 
-    if not message:
+    if not player_message:
         return "Please provide a message", 400
+    
+    add_memory(text=player_message, role="player")
+
+    message = build_prompt(player_message)
 
     # Generate AI response
-    #response = ask_npc(message)
     response = client.responses.create(
         model="gpt-4o",
-        instructions=f"{npc_role}, {inventory}, {memory_user}, {memory_npc}, {active_mood}",
-        input=f"{message}"
+        instructions=f"Your name is {npc_name} and you are {npc_role} in a RolePlay Game. You have a good memory and remember past conversations or important information. Use the memories only if you decide that it is necessary to provide accurate context.",
+        input=message
     )
-    print(response.output[0].id)
+
+    add_memory(text=(response.output_text), role="npc")
+    
     return response.output_text
 
 

@@ -15,7 +15,7 @@ def add_memory(text, role):
     """
     Adds the NPC-Answer to the database.
     :param text: the answer that is displayed to the user from OpenAi Api or the user prompt
-    :param role: 'user' or 'assistant'
+    :param role: 'player' or 'npc'
     :return: None
     """
     id = str(uuid.uuid4())
@@ -27,20 +27,20 @@ def add_memory(text, role):
     print("added to memory")
 
 
-def get_memory_user(text):
+def get_memories_from_player(text):
     results = collection.query(
         query_texts=[text],
-        n_results=10,
-        where={"role": "user"}
+        n_results=5,
+        where={"role": "player"}
     )
     return results["documents"][0]
 
 
-def get_memory_assistant(text):
+def get_memories_from_npc(text):
     results = collection.query(
         query_texts=[text],
-        n_results=10,
-        where={"role": "assistant"}
+        n_results=5,
+        where={"role": "npc"}
     )
     return results["documents"][0]
 
