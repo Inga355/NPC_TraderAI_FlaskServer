@@ -73,7 +73,7 @@ def npc_chat():
     # Generate AI response
     response = client.responses.create(
         model="gpt-4o",
-        instructions=f"Your name is {npc_name} and you are {npc_role} in a RolePlay Game. You have a good memory and remember past conversations or important information. Use the memories only if you decide that it is necessary to provide accurate context.",
+        instructions=f"Your name is {npc_name} and you are {npc_role}. You have a good memory and remember past conversations or important information. Use the memories only if you decide that it is necessary to provide accurate context.",
         input=message
     )
 

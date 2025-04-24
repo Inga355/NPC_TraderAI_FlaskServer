@@ -1,5 +1,7 @@
 import sqlite3
 
+from inventory_store import get_all_items
+
 
 def setup_database(db_path="inventory/inventory.sqlite3"):
     conn = sqlite3.connect(db_path)
@@ -37,7 +39,7 @@ def insert_entity(entity_type, entity_name, role=None, db_path="inventory/invent
 
 if __name__ == "__main__":
     # Ensure database and table exist
-    setup_database()
+    #setup_database()
     # Try to insert the test NPC
-    result = insert_entity("npc", "Drunken Johnny Delgado", "A sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly. If someone refers to any modern thing you get mad and call him out.")
-    print(result)
+    #result = insert_entity("npc", "Drunken Johnny Delgado", "A sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly. If someone refers to any modern thing you get mad and call him out.")
+    print(get_all_items(entity_id=1))
