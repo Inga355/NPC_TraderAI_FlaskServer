@@ -65,7 +65,7 @@ def get_recent_chat_messages(limit=20, db_path="inventory/inventory.sqlite3"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Holt die letzten  Nachrichten, geordnet nach Zeit
+    # returns last n- messages
     cursor.execute("""
         SELECT role, text
         FROM chat_history
@@ -79,7 +79,7 @@ def get_recent_chat_messages(limit=20, db_path="inventory/inventory.sqlite3"):
     if not rows:
         return "No chat messages found."
 
-    # Baue Liste im OpenAI-Format: [{"role": "user", "content": "..."}, ...]
+    # build text for prompt
     history_lines = []
     for role, text in rows:
         role_name = "Player" if role == "user" else "NPC"

@@ -39,13 +39,10 @@ npc_role = "A sassy trader in the 18th century and obsessed with gold. You know 
 def build_prompt(player_input):
     memories_player = get_memories_from_player(player_input)
     memories_npc = get_memories_from_npc(player_input)
-    chat_history_messages = get_recent_chat_messages(limit=20)
-    print(chat_history_messages)
 
-    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
-    #print(formatted_memories_player)
+    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player) 
     formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
-    #print(formatted_memories_npc)
+    formatted_chat_history = get_recent_chat_messages(limit=20)
 
     inventory_npc = get_all_items(1)
 
@@ -58,11 +55,18 @@ These are your memories of what you have told the player in the past:
 
 These are the items you have to sell:
 {inventory_npc}
-Make your offer wisely, do not offer all items at once, make it dependent on the conversation content, what you offer!
 
-This is your recent conversation with the player
+Guidelines for trading:
+- Offer items selectively, not all at once.
+- Base your offers on the player's current behavior, interests, and needs expressed in the conversation.
+- Suggest items if they match the player's situation, but do not overwhelm the player with too many options.
+- Haggling, special deals, or withholding items is allowed if it fits your character.
 
-Now the player is speaking to you. Respond appropriately according to your role, character, and memories. Use the memories only if you decide it gives context, better understanding of a situation or benefit for the conversation.
+This is your recent conversation with the player:
+{formatted_chat_history}
+
+Now the player is speaking to you. Respond appropriately, naturally, and in character.
+Use your memories only if they help you better understand the player or the situation.
 
 Player says: "{player_input}"
 """
@@ -84,7 +88,7 @@ def npc_chat():
     # Generate AI response
     response = client.responses.create(
         model="gpt-4o",
-        instructions=f"Your name is {npc_name} and you are {npc_role}. You have a good memory and remember past conversations or important information. Use the memories only if you decide that it is necessary to provide accurate context.",
+        instructions=f"Your name is {npc_name} and you are an NPC in a role-playing game with that role: {npc_role}. You have a good memory and remember past conversations or important information. Use the memories only if you decide that it is necessary to provide accurate context. Stay completely in character according to your assigned role and background. Never explain your reasoning or break the fourth wall.",
         input=message
     )
 
