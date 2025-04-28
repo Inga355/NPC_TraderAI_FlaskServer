@@ -76,15 +76,16 @@ def get_recent_chat_messages(limit=20, db_path="inventory/inventory.sqlite3"):
     rows = cursor.fetchall()
     conn.close()
 
-    # Baue Liste im OpenAI-Format: [{"role": "user", "content": "..."}, ...]
-    messages = []
-    for role, text in rows:
-        messages.append({
-            "role": role,
-            "content": text
-        })
+    if not rows:
+        return "No chat messages found."
 
-    return messages
+    # Baue Liste im OpenAI-Format: [{"role": "user", "content": "..."}, ...]
+    history_lines = []
+    for role, text in rows:
+        role_name = "Player" if role == "user" else "NPC"
+        history_lines.append(f"{role_name}: {text}")
+
+    return "\n".join(history_lines)
 
 
 # Initalize OpenAi
