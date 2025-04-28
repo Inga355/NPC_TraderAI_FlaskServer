@@ -1,5 +1,6 @@
 import os
 import chromadb
+import sqlite3
 import uuid
 from datetime import datetime
 from openai import OpenAI
@@ -10,6 +11,7 @@ client = chromadb.PersistentClient(path="vectordb")
 
 # Creates the collecting if not yet exists or get the collection from the client
 collection = client.get_or_create_collection(name="test_collection2")
+db_path = "inventory/inventory.sqlite3"
 
 def add_memory(text, role):
     """
@@ -24,7 +26,18 @@ def add_memory(text, role):
         metadatas=[{"created": str(datetime.now()), "role": f"{role}"}],
         ids=[id]
     )
-    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO chat_history (role, text)
+            VALUES (?, ?)
+        """, (role, text))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        print("Error: Sqlite IntegrityError occured.")
+        
     print("added to memory")
 
 
