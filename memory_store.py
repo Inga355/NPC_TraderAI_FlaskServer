@@ -60,6 +60,31 @@ def get_memories_from_npc(text):
     return results["documents"][0]
 
 
+def get_recent_chat_messages(limit=20, db_path="inventory/inventory.sqlite3"):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Holt die letzten  Nachrichten, geordnet nach Zeit
+    cursor.execute("""
+        SELECT role, text
+        FROM chat_history
+        ORDER BY timestamp ASC
+        LIMIT ?
+    """, (limit,))
+    
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Baue Liste im OpenAI-Format: [{"role": "user", "content": "..."}, ...]
+    messages = []
+    for role, text in rows:
+        messages.append({
+            "role": role,
+            "content": text
+        })
+
+    return messages
+
 
 # Initalize OpenAi
 #client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
