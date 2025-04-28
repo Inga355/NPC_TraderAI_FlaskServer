@@ -33,7 +33,7 @@ def add_memory(text, role):
     try:
         cursor.execute("""
             INSERT INTO chat_history (timestamp, role, text)
-            VALUES (?, ?)
+            VALUES (?, ?, ?)
         """, (timestamp, role, text))
         conn.commit()
     except sqlite3.IntegrityError:
