@@ -73,7 +73,7 @@ def npc_chat():
     if not player_message:
         return "Please provide a message", 400
     
-    add_memory(text=player_message, role="player")
+    add_memory(text=player_message, role="user")
 
     message = build_prompt(player_message)
 
@@ -84,7 +84,7 @@ def npc_chat():
         input=message
     )
 
-    add_memory(text=(response.output_text), role="npc")
+    add_memory(text=(response.output_text), role="assistant")
     
     return response.output_text
 

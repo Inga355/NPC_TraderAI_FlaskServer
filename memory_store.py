@@ -17,7 +17,7 @@ def add_memory(text, role):
     """
     Adds the NPC-Answer to the database.
     :param text: the answer that is displayed to the user from OpenAi Api or the user prompt
-    :param role: 'player' or 'npc'
+    :param role: 'user' or 'assistant'
     :return: None
     """
     id = str(uuid.uuid4())
@@ -26,6 +26,7 @@ def add_memory(text, role):
         metadatas=[{"created": str(datetime.now()), "role": f"{role}"}],
         ids=[id]
     )
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     timestamp = str(datetime.now())
