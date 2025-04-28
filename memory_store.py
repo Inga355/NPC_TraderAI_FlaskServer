@@ -24,6 +24,7 @@ def add_memory(text, role):
         metadatas=[{"created": str(datetime.now()), "role": f"{role}"}],
         ids=[id]
     )
+    
     print("added to memory")
 
 

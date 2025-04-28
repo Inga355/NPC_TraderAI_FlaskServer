@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
+from inventory_store import get_all_items, get_entity_role
 from memory_store import add_memory, get_memories_from_npc, get_memories_from_player
 
 
@@ -44,12 +45,18 @@ def build_prompt(player_input):
     formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
     print(formatted_memories_npc)
 
+    inventory_npc = get_all_items(1)
+
     prompt = f"""
 These are your memories of what the player has told you:
 {formatted_memories_player}
 
 These are your memories of what you have told the player:
 {formatted_memories_npc}
+
+These are the items you have to sell:
+{inventory_npc}
+Make your offer wisely, do not offer all items at once, make it dependent on the conversation content, what you offer!
 
 Now the player is speaking to you. Respond appropriately according to your role, character, and memories. Use the memories only if you decide it gives context, better understanding of a situation or benefit for the conversation.
 
