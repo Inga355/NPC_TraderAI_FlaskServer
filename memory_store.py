@@ -10,7 +10,7 @@ from openai import OpenAI
 client = chromadb.PersistentClient(path="vectordb")
 
 # Creates the collecting if not yet exists or get the collection from the client
-collection = client.get_or_create_collection(name="test_collection2")
+collection = client.get_or_create_collection(name="test3")
 db_path = "inventory/inventory.sqlite3"
 
 def add_memory(text, role):
@@ -47,7 +47,7 @@ def get_memories_from_player(text):
     results = collection.query(
         query_texts=[text],
         n_results=5,
-        where={"role": "player"}
+        where={"role": "user"}
     )
     return results["documents"][0]
 
@@ -56,7 +56,7 @@ def get_memories_from_npc(text):
     results = collection.query(
         query_texts=[text],
         n_results=5,
-        where={"role": "npc"}
+        where={"role": "assistant"}
     )
     return results["documents"][0]
 
