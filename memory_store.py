@@ -28,12 +28,13 @@ def add_memory(text, role):
     )
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+    timestamp = str(datetime.now())
 
     try:
         cursor.execute("""
-            INSERT INTO chat_history (role, text)
+            INSERT INTO chat_history (timestamp, role, text)
             VALUES (?, ?)
-        """, (role, text))
+        """, (timestamp, role, text))
         conn.commit()
     except sqlite3.IntegrityError:
         print("Error: Sqlite IntegrityError occured.")
