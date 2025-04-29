@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
-from inventory_store import get_all_items, get_entity_role
+from inventory_store import get_all_items, get_entity_name, get_entity_role
 from memory_store import add_memory, get_memories_from_npc, get_memories_from_player, get_recent_chat_messages
 
 
@@ -30,10 +30,10 @@ def get_npc_inventory(npc_id):
     return jsonify([dict(item) for item in items])"""
 
 
-#will be later fetched from database
-npc_name = "Drunken Johnny Delgado"
-npc_role = "A sassy trader in the 18th century and obsessed with gold. You know nothing from the modern world. Respond accordingly. If someone refers to any modern thing you get mad and call him out."
-#inventory = "You have 5 apples for $5.00 to sell, you would like to buy peas as much as you can. you can vary the price by 10% to make a better offer."
+# fetched from database, id will be later fetched from API routing
+npc_name = get_entity_name(1)
+npc_role = get_entity_role(1)
+
 
 
 def build_prompt(player_input):

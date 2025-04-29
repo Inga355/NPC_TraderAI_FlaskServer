@@ -21,7 +21,6 @@ def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
     rows = cursor.fetchall()
     conn.close()
 
-    # Found nothing?
     if not rows:
         return f"{entity_id} has no inventory or no items."
 
