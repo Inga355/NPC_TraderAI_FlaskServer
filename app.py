@@ -40,9 +40,12 @@ def build_prompt(player_input):
     memories_player = get_memories_from_player(player_input)
     memories_npc = get_memories_from_npc(player_input)
 
-    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player) 
+    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
+    print(formatted_memories_player)
     formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
+    print(formatted_memories_npc)
     formatted_chat_history = get_recent_chat_messages(limit=20)
+    print(formatted_chat_history)
 
     inventory_npc = get_all_items(1)
 

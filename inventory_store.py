@@ -28,7 +28,7 @@ def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
     # Formatted Output
     output = [f"{entity_id} has these items in inventory:"]
     for item_name, quantity, price in rows:
-        output.append(f"- {quantity} {item_name} zu je ${price:.2f}")
+        output.append(f"- {quantity} {item_name} at ${price:.2f} each")
 
     return "\n".join(output)
 
@@ -50,23 +50,43 @@ def insert_item(name, description="", db_path="inventory/inventory.sqlite3"):
         conn.close()
 
 
-def get_entity_role(name, db_path="inventory/inventory.sqlite3"):
+def get_entity_name(id, db_path="inventory/inventory.sqlite3"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT role FROM entities WHERE name = ?
-    """, (name,))
+        SELECT name FROM entities WHERE id = ?
+    """, (id,))
     result = cursor.fetchone()
     conn.close()
 
     if result and result[0]:
-        return f"Die Rolle von '{name}' ist: {result[0]}"
+        return f"{result[0]}"
     elif result:
-        return f"'{name}' hat keine Rolle (vermutlich kein NPC)."
+        return f"'{id}' has no specific name."
     else:
-        return f"Keine Entity mit dem Namen '{name}' gefunden."
+        return f"No entity with '{id}' found."
+
+
+def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT role FROM entities WHERE id = ?
+    """, (id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    if result and result[0]:
+        return f"{result[0]}"
+    elif result:
+        return f"'{id}' has no specific role."
+    else:
+        return f"No entity with '{id}' found."
     
 
 
 print(get_all_items(1))
+print(get_entity_name(1))
+print(get_entity_role(1))

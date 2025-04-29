@@ -82,7 +82,7 @@ def get_recent_chat_messages(limit=20, db_path="inventory/inventory.sqlite3"):
     # build text for prompt
     history_lines = []
     for role, text in rows:
-        role_name = "Player" if role == "user" else "NPC"
+        role_name = "Player" if role == "user" else "You"
         history_lines.append(f"{role_name}: {text}")
 
     return "\n".join(history_lines)
