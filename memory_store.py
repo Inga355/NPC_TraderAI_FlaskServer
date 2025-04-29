@@ -46,7 +46,7 @@ def add_memory(text, role):
 def get_memories_from_player(text):
     results = collection.query(
         query_texts=[text],
-        n_results=5,
+        n_results=3,
         where={"role": "user"}
     )
     return results["documents"][0]
@@ -55,7 +55,7 @@ def get_memories_from_player(text):
 def get_memories_from_npc(text):
     results = collection.query(
         query_texts=[text],
-        n_results=5,
+        n_results=3,
         where={"role": "assistant"}
     )
     return results["documents"][0]

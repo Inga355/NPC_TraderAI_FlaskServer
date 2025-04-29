@@ -30,10 +30,16 @@ def get_npc_inventory(npc_id):
     return jsonify([dict(item) for item in items])"""
 
 
-# fetched from database, id will be later fetched from API routing
-npc_name = get_entity_name(1)
-npc_role = get_entity_role(1)
-
+def build_instructions(id=1):
+    npc_name = get_entity_name(id)
+    npc_role = get_entity_role(id)
+    prompt = f"""
+Your name is {npc_name} and you are an NPC in a role-playing game with that role: {npc_role}. 
+You have a good memory and remember past conversations or important information. 
+Use the memories only if you decide that it is necessary to provide accurate context. 
+Stay completely in character according to your assigned role and background. Never explain your reasoning or break the fourth wall.
+"""
+    return prompt.strip()
 
 
 def build_prompt(player_input):
@@ -86,12 +92,13 @@ def npc_chat():
     
     add_memory(text=player_message, role="user")
 
+    role_instruction = build_instructions()
     message = build_prompt(player_message)
 
     # Generate AI response
     response = client.responses.create(
         model="gpt-4o",
-        instructions=f"Your name is {npc_name} and you are an NPC in a role-playing game with that role: {npc_role}. You have a good memory and remember past conversations or important information. Use the memories only if you decide that it is necessary to provide accurate context. Stay completely in character according to your assigned role and background. Never explain your reasoning or break the fourth wall.",
+        instructions=role_instruction,
         input=message
     )
 
