@@ -1,36 +1,26 @@
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-import sqlite3
-import openai
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 import os
+from openai import OpenAI
+from agent_tools import tools, parse_item_and_quantity
+from inventory_store import get_all_items, get_entity_name, get_entity_role
+from memory_store import add_memory, get_memories_from_npc, get_memories_from_player, get_recent_chat_messages
 
 
-app = Flask(__name__)
+
+app = Flask(__name__, static_folder='testfrontend')
+CORS(app)
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-# OpenAI API Key
-load_dotenv()
-API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = API_KEY
-
-
-# Database connection
-DB_NAME = "database.db"
-
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-# API Route: Test Endpoint
-@app.route("/", methods=["GET"])
+# API Route: Serve the chat interface
+@app.route("/npc/chat")
 def home():
-    return jsonify({"message": "Flask Server is running!"})
+    return send_from_directory('testfrontend', 'chatwindow.html')
 
 
-# API Route: Get NPC Inventory
+"""# API Route: Get NPC Inventory
 @app.route("/npc/<int:npc_id>/inventory", methods=["GET"])
 def get_npc_inventory(npc_id):
     conn = get_db_connection()
@@ -38,41 +28,122 @@ def get_npc_inventory(npc_id):
     cursor.execute("SELECT item_name, quantity FROM NPC_Inventory WHERE npc_id = ?", (npc_id,))
     items = cursor.fetchall()
     conn.close()
-    return jsonify([dict(item) for item in items])
+    return jsonify([dict(item) for item in items])"""
+
+
+def build_instructions(id=1):
+    npc_name = get_entity_name(id)
+    npc_role = get_entity_role(id)
+    prompt = f"""
+Your name is {npc_name} and you are an NPC in a role-playing game with that role: {npc_role}. 
+You have a good memory and remember past conversations or important information. 
+Use the memories only if you decide that it is necessary to provide accurate context.
+Always check to use the tools if the player is asking for something.
+Stay completely in character according to your assigned role and background. Never explain your reasoning or break the fourth wall.
+"""
+    return prompt.strip()
+
+
+def build_prompt(player_input):
+    memories_player = get_memories_from_player(player_input)
+    memories_npc = get_memories_from_npc(player_input)
+
+    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
+    print(formatted_memories_player)
+    formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
+    print(formatted_memories_npc)
+    formatted_chat_history = get_recent_chat_messages(limit=20)
+    print(formatted_chat_history)
+
+    inventory_npc = get_all_items(1)
+
+    prompt = f"""
+These are your memories of what the player has told you in the past:
+{formatted_memories_player}
+
+These are your memories of what you have told the player in the past:
+{formatted_memories_npc}
+
+These are the items you have to sell:
+{inventory_npc}
+
+Guidelines for trading:
+- Offer items selectively, not all at once.
+- Base your offers on the player's current behavior, interests, and needs expressed in the conversation.
+- Suggest items if they match the player's situation, but do not overwhelm the player with too many options.
+- If the player does not have enough money, suggest items that are affordable.
+
+This is your recent conversation with the player:
+{formatted_chat_history}
+
+Now the player is speaking to you. Respond appropriately, naturally, and in character.
+Use your memories if they help you better understand the player or the situation and if they are relevant to the conversation.
+
+Player says: "{player_input}"
+"""
+    return prompt.strip()
 
 
 # API Route: Chat with NPC (OpenAI)
-@app.route("/npc/<int:npc_id>/chat", methods=["POST"])
-def chat_with_npc(npc_id):
-    data = request.json
-    player_message = data.get("message", "")
+@app.route("/npc/chat", methods=["POST"])
+def npc_chat():
+    player_message = request.form.get("userpromt", "")
 
-    # Fetch NPC role
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT role FROM NPCs WHERE npc_id = ?", (npc_id,))
-    npc = cursor.fetchone()
-    conn.close()
+    if not player_message:
+        return "Please provide a message", 400
+    
+    add_memory(text=player_message, role="user")
 
-    if not npc:
-        return jsonify({"error": "NPC not found"}), 404
-
-    npc_role = npc["role"]
+    role_instruction = build_instructions()
+    message = build_prompt(player_message)
 
     # Generate AI response
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": f"You are an NPC, a {npc_role}. Respond accordingly."},
-            {"role": "user", "content": player_message}
-        ],
-        temperature=0.7,
-        max_tokens=512
+    response = client.responses.create(
+        model="gpt-4o",
+        instructions=role_instruction,
+        input=message,
+        tools=tools,
+        tool_choice="auto" # LLM decides by itself to use tools or not
     )
-    npc_response = response["choices"][0]["message"]["content"]
 
-    return jsonify({"npc_response": npc_response})
+    add_memory(text=(response.output_text), role="assistant")
+    
+    # Process the response and any tool calls
+    print(response.output)
+    tool_calls = response.output
+    results = []
+
+    if tool_calls and isinstance(tool_calls, list):
+        for tool_call in tool_calls:
+            if hasattr(tool_call, "arguments"):
+                try:
+                    args = json.loads(tool_call.arguments)
+                    result = parse_item_and_quantity(**args)
+                    results.append(result)
+                except Exception as e:
+                    print(f"Fehler beim Verarbeiten der Tool-Argumente: {e}")
+            else:
+                print("Tool-Call ohne arguments-Feld erkannt.")
+
+    for result in results:
+        print("ToolOutput:",result)
+
+    response_text = response.output_text
+
+    if response_text == '':
+        followup_response = client.responses.create(
+            model="gpt-4o",
+            instructions=role_instruction,
+            input=message
+        )
+
+        print(f"I have used a tool.")
+
+        followup_response_text = followup_response.output_text
+        return followup_response_text
+    else:
+        return response_text
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5000, debug=True)
