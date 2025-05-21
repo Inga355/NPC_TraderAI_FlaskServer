@@ -38,4 +38,3 @@ def ask_npc(prompt: str) -> str:
 
 
 
-

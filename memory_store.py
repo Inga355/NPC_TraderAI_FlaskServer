@@ -96,4 +96,3 @@ def get_recent_chat_messages(limit=20, db_path="inventory/inventory.sqlite3"):
 #embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 #index = pc.Index(INDEX_NAME)
 #print(embeddings)
-

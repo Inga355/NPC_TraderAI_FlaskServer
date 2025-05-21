@@ -69,13 +69,13 @@ Guidelines for trading:
 - Offer items selectively, not all at once.
 - Base your offers on the player's current behavior, interests, and needs expressed in the conversation.
 - Suggest items if they match the player's situation, but do not overwhelm the player with too many options.
-- Haggling, special deals, or withholding items is allowed if it fits your character.
+- If the player does not have enough money, suggest items that are affordable.
 
 This is your recent conversation with the player:
 {formatted_chat_history}
 
 Now the player is speaking to you. Respond appropriately, naturally, and in character.
-Use your memories only if they help you better understand the player or the situation.
+Use your memories if they help you better understand the player or the situation and if they are relevant to the conversation.
 
 Player says: "{player_input}"
 """
@@ -99,12 +99,48 @@ def npc_chat():
     response = client.responses.create(
         model="gpt-4o",
         instructions=role_instruction,
-        input=message
+        input=message,
+        tools=tools,
+        tool_choice="auto" # LLM decides by itself to use tools or not
     )
 
     add_memory(text=(response.output_text), role="assistant")
     
-    return response.output_text
+    # Process the response and any tool calls
+    print(response.output)
+    tool_calls = response.output
+    results = []
+
+    if tool_calls and isinstance(tool_calls, list):
+        for tool_call in tool_calls:
+            if hasattr(tool_call, "arguments"):
+                try:
+                    args = json.loads(tool_call.arguments)
+                    result = parse_item_and_quantity(**args)
+                    results.append(result)
+                except Exception as e:
+                    print(f"Fehler beim Verarbeiten der Tool-Argumente: {e}")
+            else:
+                print("Tool-Call ohne arguments-Feld erkannt.")
+
+    for result in results:
+        print("ToolOutput:",result)
+
+    response_text = response.output_text
+
+    if response_text == '':
+        followup_response = client.responses.create(
+            model="gpt-4o",
+            instructions=role_instruction,
+            input=message
+        )
+
+        print(f"I have used a tool.")
+
+        followup_response_text = followup_response.output_text
+        return followup_response_text
+    else:
+        return response_text
 
 
 if __name__ == "__main__":
