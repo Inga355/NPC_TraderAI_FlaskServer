@@ -1,7 +1,3 @@
-# Initialize database
-inventory = NPCInventory(db_path="npc_inventory.db")
-
-
 def parse_item_and_quantity(text: str):
     if not text or not text.strip():
         raise ValueError("Input cannot be empty")
