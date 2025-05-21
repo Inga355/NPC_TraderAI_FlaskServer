@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
+from agent_tools import tools, parse_item_and_quantity
 from inventory_store import get_all_items, get_entity_name, get_entity_role
 from memory_store import add_memory, get_memories_from_npc, get_memories_from_player, get_recent_chat_messages
 
