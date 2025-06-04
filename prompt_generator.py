@@ -1,3 +1,7 @@
+import json
+import re
+from agent_tools import parse_trade_intent
+from typing import List, Dict
 from inventory_store import get_all_items, get_entity_name, get_entity_role
 from memory_store import get_memories_from_player, get_memories_from_npc, get_recent_chat_messages
 
@@ -52,9 +56,8 @@ def build_prompt(player_input):
         do not trigger the tool 'parse_trade_items' instead ask the player to be more specific.
         - Always ensure that your inference is grounded in the chat context and your current inventory. Never guess items you don't offer.
 
-
         This is your recent conversation with the player:
-        {formatted_chat_history}0
+        {formatted_chat_history}
 
         Now the player is speaking to you. Respond appropriately, naturally, and in character.
         Use your memories if they help you better understand the player or the situation and if they are relevant to the conversation.
@@ -65,7 +68,9 @@ def build_prompt(player_input):
     return prompt.strip()
 
 
-def build_followup_prompt(buy_items, sell_items):  
+def build_followup_prompt(buy_items, sell_items):
+    formatted_chat_history_followup = get_recent_chat_messages(limit=6)
+
     prompt = f"""
         The player has expressed an intent to buy {buy_items} and sell {sell_items}.
         Ask the player to confirm this trade. If ether buy or sell is empty, do not ask for confirmation of the empty one. 
@@ -73,6 +78,9 @@ def build_followup_prompt(buy_items, sell_items):
 
         Once the player responds, use the tool 'trade_consent' to determine whether they clearly consent to the trade.
         Do not proceed with the trade unless consent is 'yes'.
+
+        This is the recent conversation with the player.
+        {formatted_chat_history_followup}
 
         Make sure to:
         - Ask the question clearly, such as: 'Are you sure you want to buy 5 apples and sell 2 swords? Let's make a deal!'
@@ -86,3 +94,44 @@ def build_followup_prompt(buy_items, sell_items):
     return prompt.strip()
 
 
+def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
+    """
+    Versucht aus dem letzten Chatverlauf zu ermitteln, welche Items der Spieler wahrscheinlich kaufen möchte
+    und wie viele davon verfügbar sind. Nur gültige Items aus dem Inventory werden berücksichtigt.
+    """
+    chat_history = get_recent_chat_messages(limit=2)
+    inferred = {}
+
+    # Nutze nur den letzten relevanten Satz
+    lines = [line.strip().lower() for line in chat_history.strip().splitlines() if line.strip()]
+    if not lines:
+        return {}
+
+    last_player_line = ""
+    for line in reversed(lines):
+        if line.startswith("player:") or line.startswith("you:"):
+            last_player_line = line.split(":", 1)[-1].strip()
+            print(f"This is last PlayerLine: {last_player_line}")
+            break
+
+    # Keywords wie "all", "everything", "some"
+    if any(word in last_player_line for word in ["all", "everything", "whatever"]):
+        return {item: quantity for item, quantity in inventory.items() if quantity > 0}
+
+    # Suche nach Mengenangaben + Items
+    for item in inventory:
+        # Erlaube Varianten wie "5 apples", "five apples", "give me 2 apples"
+        pattern = rf"(\\d+)\\s+{item}"
+        match = re.search(pattern, last_player_line)
+        if match:
+            quantity = int(match.group(1))
+            available_quantity = inventory[item]
+            inferred[item] = min(quantity, available_quantity)
+
+    # Wenn keine Zahl, aber Item genannt ist, und Menge unklar -> gesamte verfügbare Menge anbieten
+    if not inferred:
+        for item in inventory:
+            if item in last_player_line and inventory[item] > 0:
+                inferred[item] = inventory[item]  # oder einfach 1, je nach Philosophie
+
+    return inferred
