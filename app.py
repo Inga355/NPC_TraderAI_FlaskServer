@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
-from agent_tools import tools, parse_item_and_quantity
-from prompt_generator import build_instructions, build_prompt
+from agent_tools import tools, parse_trade_intent
+from prompt_generator import build_instructions, build_prompt, build_followup_prompt
 from memory_store import add_memory
 import json
 
@@ -49,21 +49,35 @@ def npc_chat():
     print(response.output)
     tool_calls = response.output
     results = []
+    trade_state = None
+    buy_items = []
+    sell_items = []
 
     if tool_calls and isinstance(tool_calls, list):
         for tool_call in tool_calls:
             if hasattr(tool_call, "arguments"):
                 try:
                     args = json.loads(tool_call.arguments)
-                    result = parse_item_and_quantity(**args)
+                    trade_state = args["trade_state"]
+                    item = args["item"]
+                    quantity = args["quantity"]
+                    result = parse_trade_intent(trade_state, item, quantity)
                     results.append(result)
                 except Exception as e:
                     print(f"Fehler beim Verarbeiten der Tool-Argumente: {e}")
             else:
                 print("Tool-Call ohne arguments-Feld erkannt.")
 
+    # Format the output
     for result in results:
-        print("ToolOutput:",result)
+        if result["trade_state"] == "buy":
+            buy_items.append(result)
+            
+        elif result["trade_state"] == "sell":
+            sell_items.append(result)
+                   
+    print("Buy Items:", buy_items)
+    print("Sell Items:", sell_items)
 
     response_text = response.output_text
 
@@ -71,7 +85,7 @@ def npc_chat():
         followup_response = client.responses.create(
             model="gpt-4o",
             instructions=role_instruction,
-            input=message
+            input=build_followup_prompt(buy_items, sell_items)
         )
 
         print(f"I have used a tool.")

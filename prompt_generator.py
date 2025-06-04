@@ -48,13 +48,41 @@ def build_prompt(player_input):
         Invalid means: items not present in your inventory, or quantities that exceed what you have.
         - Instead, respond in character, informing the player what is actually available.
         - Only use 'parse_trade_items' if the player's request matches the available items and quantities.
+        - If the player's request is ambiguous or vague (e.g., 'I want them all', 'give me some', 'I will take whatever'), 
+        do not trigger the tool 'parse_trade_items' instead ask the player to be more specific.
+        - Always ensure that your inference is grounded in the chat context and your current inventory. Never guess items you don't offer.
+
 
         This is your recent conversation with the player:
-        {formatted_chat_history}
+        {formatted_chat_history}0
 
         Now the player is speaking to you. Respond appropriately, naturally, and in character.
         Use your memories if they help you better understand the player or the situation and if they are relevant to the conversation.
+        Use the chat history to understand the player's current situation and needs and to construct context for your response.
 
         Player says: "{player_input}"
         """
     return prompt.strip()
+
+
+def build_followup_prompt(buy_items, sell_items):  
+    prompt = f"""
+        The player has expressed an intent to buy {buy_items} and sell {sell_items}.
+        Ask the player to confirm this trade. If ether buy or sell is empty, do not ask for confirmation of the empty one. 
+        If both are empty, do not ask for confirmation. If there are many items, ask for confirmation for each item.
+
+        Once the player responds, use the tool 'trade_consent' to determine whether they clearly consent to the trade.
+        Do not proceed with the trade unless consent is 'yes'.
+
+        Make sure to:
+        - Ask the question clearly, such as: 'Are you sure you want to buy 5 apples and sell 2 swords? Let's make a deal!'
+        - Only trigger the tool once the player responds.
+        - If the player's answer is unclear, indirect, or they change the terms, the tool should return 'unsure'.
+
+        Always call the tool with:
+        - confirmation_prompt: the exact question you asked
+        - player_response: the response message from the player
+    """
+    return prompt.strip()
+
+

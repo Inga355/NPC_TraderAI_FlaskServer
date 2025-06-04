@@ -1,51 +1,48 @@
-def parse_item_and_quantity(text: str):
-    if not text or not text.strip():
-        raise ValueError("Input cannot be empty")
-    
-    parts = text.split()
-    item = parts[0].strip()
-    if not item:
-        raise ValueError("Item name cannot be empty")
-    
+def parse_trade_intent(trade_state: str="no trade", item: str="null", quantity: int=0):
+        
     # Handle plural forms
     item = item.lower()  # Convert to lowercase for consistency
     if item.endswith('s'):
         item = item[:-1]  # Remove trailing 's' for singular form
-        
-    quantity = 1
-    if len(parts) > 1:
-        try:
-            quantity = int(parts[1].strip())
-            if quantity <= 0:
-                raise ValueError("Quantity must be positive")
-        except ValueError:
-            raise ValueError("Quantity must be a valid positive number")
-
-    return {"item": item, "quantity": quantity}
+    print("Function called!")    
+    return {"trade_state": trade_state, "item": item, "quantity": quantity}
 
 
 tools = [
     {
         "type": "function",
-        "name": "parse_item_and_quantity",
+        "name": "parse_trade_intent",
         "description": (
-            "Extracts an item and quantity from input. Format must be 'item quantity', "
-            "such as 'apple 5', 'rum 1' or 'banana 2'. Quantity must be an integer. "
-            "Always use singular form for the item. Do not use words for numbers."
-            "If no specific quantity is given, set it to 1."
+            "Analyze the player's message to determine if they express a clear intent to trade. "
+            "If so, extract whether the intent is to 'buy' or 'sell', and also extract the item and quantity if mentioned. "
+            "Only return a trade intent if the message clearly states the player wants to buy or sell a specific item. "
+            "Do not return a trade intent for vague or exploratory questions like 'Do you have apples to sell?', "
+                "'Can I buy some rum?', or 'I want to buy something'. In such cases, return 'no trade'.\n\n"
+            "The result must always be returned as a JSON object with the following keys:\n"
+            "- trade_state: either 'buy', 'sell', or 'no trade'\n"
+            "- item: the name of the item (in singular form), or null if not specified\n"
+            "- quantity: a positive integer, or 0 if for vague expressions like 'some apples', 'a lot of beer', or 'a few swords'."
+
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "text": {
+                "trade_state": {
                     "type": "string",
-                    "description": (
-                        "A phrase containing the item and numeric quantity, like 'apple 5' or 'bread 2'. "
-                        "Always provide the quantity as a number. Do not use words like 'five' or 'some'."
-                    )
+                    "description": "The player's trade intent: either 'buy', 'sell', or 'no trade'.",
+                    "enum": ["buy", "sell", "no trade"]
+                },
+                "item": {
+                    "type": ["string", "null"],
+                    "description": "The item being bought or sold, in singular form. Null if no item is mentioned."
+                },
+                "quantity": {
+                    "type": "integer",
+                    "description": "The quantity of the item. Defaults to 1 if not specified.",
+                    "minimum": 1
                 }
             },
-            "required": ["text"],
+            "required": ["trade_state", "item", "quantity"],
             "additionalProperties": False
         }
     }
