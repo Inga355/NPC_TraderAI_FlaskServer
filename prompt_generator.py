@@ -76,22 +76,16 @@ def build_followup_prompt(buy_items, sell_items):
         Ask the player to confirm this trade. If ether buy or sell is empty, do not ask for confirmation of the empty one. 
         If both are empty, do not ask for confirmation. If there are many items, ask for confirmation for each item.
 
-        Once the player responds, use the tool 'trade_consent' to determine whether they clearly consent to the trade.
-        Do not proceed with the trade unless consent is 'yes'.
-
-        This is the recent conversation with the player.
+        This is the recent conversation with the player. Use it to determine the context about what the player asked for.
         {formatted_chat_history_followup}
 
         Make sure to:
         - Ask the question clearly, such as: 'Are you sure you want to buy 5 apples and sell 2 swords? Let's make a deal!'
-        - Only trigger the tool once the player responds.
-        - If the player's answer is unclear, indirect, or they change the terms, the tool should return 'unsure'.
-
-        Always call the tool with:
-        - confirmation_prompt: the exact question you asked
-        - player_response: the response message from the player
     """
     return prompt.strip()
+
+
+
 
 
 def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:

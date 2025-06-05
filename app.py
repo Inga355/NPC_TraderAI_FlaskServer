@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
-from agent_tools import tools, parse_trade_intent
+from agent_tools import tool_consent, tool_parse,  parse_trade_intent
 from prompt_generator import build_instructions, build_prompt, build_followup_prompt
 from memory_store import add_memory
 import json
@@ -39,7 +39,7 @@ def npc_chat():
         model="gpt-4o",
         instructions=role_instruction,
         input=message,
-        tools=tools,
+        tools=tool_parse,
         tool_choice="auto" # LLM decides by itself to use tools or not
     )
 
@@ -68,7 +68,7 @@ def npc_chat():
             else:
                 print("Tool-Call ohne arguments-Feld erkannt.")
 
-    # Format the output
+    # Format the output from tool call
     for result in results:
         if result["trade_state"] == "buy":
             buy_items.append(result)
@@ -78,22 +78,36 @@ def npc_chat():
                    
     print("Buy Items:", buy_items)
     print("Sell Items:", sell_items)
+    
+    
+    if results:  # Wenn Tool parse_trade_intent Daten geliefert hat
+        followup_prompt = build_followup_prompt(buy_items, sell_items)
 
-    response_text = response.output_text
+        # Jetzt neuer API-Call, um GPT followup machen zu lassen
+        followup_response = client.responses.create(
+            model="gpt-4o",
+            instructions=role_instruction,
+            input=followup_prompt,
+            tools=tool_consent,
+            tool_choice="auto"
+        )
 
+        print("Follow-up GPT Output:", followup_response.output)
+        response_text = followup_response.output_text or ""  # ggf. leer, wenn wieder Tool
+        return response_text
+    else:
+        return response.output_text
+    
+"""
+    # Init followup response to ask for confirmation
     if response_text == '':
         followup_response = client.responses.create(
             model="gpt-4o",
             instructions=role_instruction,
-            input=build_followup_prompt(buy_items, sell_items)
+            input=build_followup_prompt(buy_items, sell_items),
         )
-
-        print(f"I have used a tool.")
-
-        followup_response_text = followup_response.output_text
-        return followup_response_text
-    else:
-        return response_text
+        # Format the output
+        followup_response_text = followup_response.output_text"""   
 
 
 if __name__ == "__main__":
