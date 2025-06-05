@@ -85,7 +85,3 @@ def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
         return f"No entity with '{id}' found."
     
 
-
-print(get_all_items(1))
-print(get_entity_name(1))
-print(get_entity_role(1))

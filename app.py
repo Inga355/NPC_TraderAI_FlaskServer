@@ -106,32 +106,27 @@ def npc_chat():
         response_text = followup_response.output_text or "" 
         return response_text
     
+    # Followup after tool trade_consent
+    if last_tool_used == "trade_consent" and consent_result:
+        consent = consent_result["consent"]
+
+        """
+        Can later be improved by handling per GPT and adding sentiments
+        """
+        if consent == "yes":
+        # execute_trade()
+            return "The trade has been confirmed and processed!"
+
+        elif consent == "no":
+            return "Understood. The trade has been cancelled."
+
+        elif consent == "unsure":
+            return "I'm not sure if you're ready to trade. Let me know when you are!"
+    
     # Output without tool call
     else:
         return response.output_text
     
-"""
-    # Init followup response to ask for confirmation
-    if response_text == '':
-        followup_response = client.responses.create(
-            model="gpt-4o",
-            instructions=role_instruction,
-            input=build_followup_prompt(buy_items, sell_items),
-        )
-        # Format the output
-        followup_response_text = followup_response.output_text"""   
-
-
-"""    # Format the output from tool call
-    for result in results:
-        if result["trade_state"] == "buy":
-            buy_items.append(result)           
-        elif result["trade_state"] == "sell":
-            sell_items.append(result)
-                   
-    print("Buy Items:", buy_items)
-    print("Sell Items:", sell_items)
-"""    
  
 
 if __name__ == "__main__":
