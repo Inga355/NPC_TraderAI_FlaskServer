@@ -7,36 +7,13 @@ def parse_trade_intent(trade_state: str="no trade", item: str="null", quantity: 
     return {"trade_state": trade_state, "item": item, "quantity": quantity}
 
 
-def trade_consent(confirmation_prompt: str, player_response: str) -> dict:
-    """
-    Prüft, ob die Antwort des Spielers eine klare Zustimmung oder Ablehnung ist.
-    Gibt 'yes', 'no' oder 'unsure' zurück.
-    """
-    print("Consent Tool")
-    # Normalisieren
-    response = player_response.lower().strip()
-
-    # Klare Zustimmung
-    consent_yes = ["yes", "sure", "okay", "alright", "let's do it", "absolutely", "of course", "ja", "klar", "mach ich", "mach mal", "auf jeden fall"]
-    if any(phrase in response for phrase in consent_yes):
-        return { "consent": "yes" }
-
-    # Klare Ablehnung
-    consent_no = ["no", "never mind", "i changed my mind", "nah", "nein", "doch nicht", "vergiss es", "nö"]
-    if any(phrase in response for phrase in consent_no):
-        return { "consent": "no" }
-
-    # Vage oder verändert
-    unclear_phrases = ["maybe", "not sure", "can i", "what about", "how about", "only if", "if you", "was kostet", "kann ich", "nur zwei", "hast du"]
-    if any(phrase in response for phrase in unclear_phrases):
-        return { "consent": "unsure" }
-
-    # Wenn nichts eindeutig erkannt wurde
-    return { "consent": "unsure" }
+def trade_consent(consent: str='unsure'):
+    print("Function trade_consent called!")
+    return {"Consent": consent}
 
 
 
-tool_parse = [
+tools = [ 
     {
         "type": "function",
         "name": "parse_trade_intent",
@@ -73,33 +50,29 @@ tool_parse = [
             "required": ["trade_state", "item", "quantity"],
             "additionalProperties": False
         }
-    }
-]
-
-tool_consent = [
+    },
     {
         'type': 'function',
         'name': 'trade_consent',
-        'description': (
-            "Check whether the player's response to a trade confirmation question expresses clear consent to proceed with the trade. "
-            "Return 'yes' if the player clearly agrees to the trade (e.g., 'Yes', 'Sure', 'Let's do it'). "
-            "Return 'no' if the player refuses (e.g., 'No', 'I changed my mind'). "
-            "Return 'unsure' if the message is unclear, evasive, or introduces changes (e.g., 'Maybe', 'Can I get only 2 instead?', 'What about pears?')."
+        "description": (
+            "Analyze the most recent chat history to determine whether the player's message is a direct response "
+            "to a trade confirmation question from the previous assistant message. "
+            "Use this tool only if the last assistant message asked the player to confirm a specific trade. "
+            "Return 'yes' if the player clearly agrees (e.g., 'Yes', 'Sure', 'Let's do it'). "
+            "Return 'no' if the player explicitly refuses (e.g., 'No', 'I changed my mind'). "
+            "Return 'unsure' if the player's message is unclear, indirect, or changes the terms (e.g., 'Maybe', "
+            "'Can I get only 2 instead?', 'What about pears?')."
         ),
         'parameters': {
             'type': 'object',
             'properties': {
-                'confirmation_prompt': {
+                'consent': {
                     'type': 'string',
-                    'description': 'The confirmation message shown to the player (e.g. "Do you want to buy 3 apples?")'
+                    'description': "The players trade consent: either 'yes', 'no' or 'unsure'."
                 },
-                'player_response': {
-                    'type': 'string',
-                    'description': 'The player\'s reply to the confirmation message.'
-                }
             },
-            'required': ['confirmation_prompt', 'player_response'],
-            'additionalProperties': False
+            'required': ['consent'],
+            "additionalProperties": False
         }
     }
 ]

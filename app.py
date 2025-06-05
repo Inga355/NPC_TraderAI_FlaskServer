@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
-from agent_tools import tool_consent, tool_parse,  parse_trade_intent
+from agent_tools import tools, parse_trade_intent, trade_consent
 from prompt_generator import build_instructions, build_prompt, build_followup_prompt
 from memory_store import add_memory
 import json
@@ -39,7 +39,7 @@ def npc_chat():
         model="gpt-4o",
         instructions=role_instruction,
         input=message,
-        tools=tool_parse,
+        tools=tools,
         tool_choice="auto" # LLM decides by itself to use tools or not
     )
 
@@ -49,52 +49,64 @@ def npc_chat():
     print(response.output)
     tool_calls = response.output
     results = []
+    last_tool_used = []
     trade_state = None
     buy_items = []
     sell_items = []
+    consent_result = []
 
+    # Check if any tool was called
     if tool_calls and isinstance(tool_calls, list):
         for tool_call in tool_calls:
             if hasattr(tool_call, "arguments"):
                 try:
                     args = json.loads(tool_call.arguments)
-                    trade_state = args["trade_state"]
-                    item = args["item"]
-                    quantity = args["quantity"]
-                    result = parse_trade_intent(trade_state, item, quantity)
-                    results.append(result)
-                except Exception as e:
-                    print(f"Fehler beim Verarbeiten der Tool-Argumente: {e}")
-            else:
-                print("Tool-Call ohne arguments-Feld erkannt.")
+                    
+                    # Process tool call for trade intent
+                    if tool_call.name == "parse_trade_intent":
+                        trade_state = args["trade_state"]
+                        item = args["item"]
+                        quantity = args["quantity"]
+                        result = parse_trade_intent(trade_state, item, quantity)
+                        results.append(result)
+                        last_tool_used = "parse_trade_intent"
 
-    # Format the output from tool call
-    for result in results:
-        if result["trade_state"] == "buy":
-            buy_items.append(result)
-            
-        elif result["trade_state"] == "sell":
-            sell_items.append(result)
-                   
-    print("Buy Items:", buy_items)
-    print("Sell Items:", sell_items)
-    
-    
-    if results:  # Wenn Tool parse_trade_intent Daten geliefert hat
+                        if result["trade_state"] == "buy":
+                            buy_items.append(result)       
+                        elif result["trade_state"] == "sell":
+                            sell_items.append(result)
+                    
+                    # Process tool call for trade consent
+                    elif tool_call.name == "trade_consent":
+                        consent = args["consent"]
+                        consent_result = trade_consent(consent)
+                        last_tool_used = "trade_consent"
+                        print(f"Consent Result: {consent_result}")
+                    
+                    else:
+                        print(f"Unknown Tool: {tool_call.name}")
+
+                except Exception as e:
+                    print(f"Error processing tool arguments: {e}")
+            else:
+                print("Tool call without arguments field detected!")
+   
+    # Followup after tool parse_trade_intent
+    if last_tool_used == "parse_trade_intent" and results:  
         followup_prompt = build_followup_prompt(buy_items, sell_items)
 
-        # Jetzt neuer API-Call, um GPT followup machen zu lassen
+        # New API call to execute confirmation call
         followup_response = client.responses.create(
             model="gpt-4o",
             instructions=role_instruction,
-            input=followup_prompt,
-            tools=tool_consent,
-            tool_choice="auto"
+            input=followup_prompt
         )
 
         print("Follow-up GPT Output:", followup_response.output)
-        response_text = followup_response.output_text or ""  # ggf. leer, wenn wieder Tool
+        response_text = followup_response.output_text or "" 
         return response_text
+    
+    # Output without tool call
     else:
         return response.output_text
     
@@ -109,6 +121,18 @@ def npc_chat():
         # Format the output
         followup_response_text = followup_response.output_text"""   
 
+
+"""    # Format the output from tool call
+    for result in results:
+        if result["trade_state"] == "buy":
+            buy_items.append(result)           
+        elif result["trade_state"] == "sell":
+            sell_items.append(result)
+                   
+    print("Buy Items:", buy_items)
+    print("Sell Items:", sell_items)
+"""    
+ 
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)

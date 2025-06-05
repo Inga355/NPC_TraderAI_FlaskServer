@@ -25,12 +25,8 @@ def build_prompt(player_input):
     memories_npc = get_memories_from_npc(player_input)
 
     formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
-    print(formatted_memories_player)
     formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
-    print(formatted_memories_npc)
     formatted_chat_history = get_recent_chat_messages(limit=20)
-    print(formatted_chat_history)
-
     inventory_npc = get_all_items(1)
 
     prompt = f"""
@@ -48,13 +44,26 @@ def build_prompt(player_input):
         - Base your offers on the player's current behavior, interests, and needs expressed in the conversation.
         - Suggest items if they match the player's situation, but do not overwhelm the player with too many options.
         - If the player does not have enough money, suggest items that are affordable.
-        - Never trigger the tool 'parse_trade_items' for invalid or impossible trades.
+        - Never trigger the tool 'parse_trade_intent' for invalid or impossible trades.
         Invalid means: items not present in your inventory, or quantities that exceed what you have.
         - Instead, respond in character, informing the player what is actually available.
-        - Only use 'parse_trade_items' if the player's request matches the available items and quantities.
+        - Only use 'parse_trade_intent' if the player's request matches the available items and quantities.
         - If the player's request is ambiguous or vague (e.g., 'I want them all', 'give me some', 'I will take whatever'), 
-        do not trigger the tool 'parse_trade_items' instead ask the player to be more specific.
+        do not trigger the tool 'parse_trade_intent'. Instead, ask the player to be more specific.
         - Always ensure that your inference is grounded in the chat context and your current inventory. Never guess items you don't offer.
+
+        Guidelines for using the tool 'trade_consent':
+        - Only use this tool if you have just asked the player a direct trade confirmation question 
+        (e.g., "Do you want to buy 5 apples?").
+        - Do not use this tool unless the last assistant message was a clear trade confirmation question.
+        - When the player responds, analyze whether their message confirms, denies, or is unsure about the trade.
+        - Use the recent chat history to determine the connection between your question and their answer.
+        - Return 'yes' if the player clearly agrees (e.g., "Yes", "Sure", "Alright", "Let's do it").
+        - Return 'no' if the player explicitly refuses (e.g., "No", "I changed my mind").
+        - Return 'unsure' if the player's message is vague, indirect, or changes the terms 
+        (e.g., "Maybe", "Can I get just 2?", "What about pears?").
+        - Never trigger 'trade_consent' preemptively or without a player response.
+        - Do not assume consent based on context; always wait for an explicit player reply.
 
         This is your recent conversation with the player:
         {formatted_chat_history}
@@ -64,7 +73,8 @@ def build_prompt(player_input):
         Use the chat history to understand the player's current situation and needs and to construct context for your response.
 
         Player says: "{player_input}"
-        """
+"""
+
     return prompt.strip()
 
 
@@ -85,18 +95,15 @@ def build_followup_prompt(buy_items, sell_items):
     return prompt.strip()
 
 
-
-
-
 def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
     """
-    Versucht aus dem letzten Chatverlauf zu ermitteln, welche Items der Spieler wahrscheinlich kaufen möchte
-    und wie viele davon verfügbar sind. Nur gültige Items aus dem Inventory werden berücksichtigt.
+    Try to use recent chat history to determine which items the player is likely to want to purchase and how many are available.
+    Only valid inventory items will be considered.
     """
     chat_history = get_recent_chat_messages(limit=2)
     inferred = {}
 
-    # Nutze nur den letzten relevanten Satz
+    # Use the last relevant sentence
     lines = [line.strip().lower() for line in chat_history.strip().splitlines() if line.strip()]
     if not lines:
         return {}
@@ -108,11 +115,11 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
             print(f"This is last PlayerLine: {last_player_line}")
             break
 
-    # Keywords wie "all", "everything", "some"
+    # Keywords like "all", "everything", "some"
     if any(word in last_player_line for word in ["all", "everything", "whatever"]):
         return {item: quantity for item, quantity in inventory.items() if quantity > 0}
 
-    # Suche nach Mengenangaben + Items
+    # Looking for quantities and items
     for item in inventory:
         # Erlaube Varianten wie "5 apples", "five apples", "give me 2 apples"
         pattern = rf"(\\d+)\\s+{item}"
@@ -122,10 +129,10 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
             available_quantity = inventory[item]
             inferred[item] = min(quantity, available_quantity)
 
-    # Wenn keine Zahl, aber Item genannt ist, und Menge unklar -> gesamte verfügbare Menge anbieten
+    # If quantity is unclear but item is matched -> offer max item
     if not inferred:
         for item in inventory:
             if item in last_player_line and inventory[item] > 0:
-                inferred[item] = inventory[item]  # oder einfach 1, je nach Philosophie
+                inferred[item] = inventory[item]
 
     return inferred
