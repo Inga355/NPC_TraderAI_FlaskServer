@@ -58,8 +58,8 @@ tools = [
             "Analyze the most recent chat history to determine whether the player's message is a direct response "
             "to a trade confirmation question from the previous assistant message. "
             "Use this tool only if the last assistant message asked the player to confirm a specific trade. "
-            "Return 'yes' if the player clearly agrees (e.g., 'Yes', 'Sure', 'Let's do it'). "
-            "Return 'no' if the player explicitly refuses (e.g., 'No', 'I changed my mind'). "
+            "Return 'yes' if the player clearly agrees (e.g., 'Yes', 'Sure', 'Let's do it', 'Deal', 'ok', or similiar phrases). "
+            "Return 'no' if the player explicitly refuses (e.g., 'No', 'I changed my mind', 'not today' or similiar phrases). "
             "Return 'unsure' if the player's message is unclear, indirect, or changes the terms (e.g., 'Maybe', "
             "'Can I get only 2 instead?', 'What about pears?')."
         ),
@@ -76,40 +76,3 @@ tools = [
         }
     }
 ]
-
-
-
-"""
-# Define functional wrappers
-def has_item_tool(input_text: str) -> str:
-    item, quantity = parse_item_and_quantity(input_text)
-    result = inventory.has_item(item, quantity)
-    return (
-        f"Yes, the NPC has at least {quantity} '{item}'."
-        if result else
-        f"No, the NPC does not have {quantity} '{item}'."
-    )
-
-
-def give_item_tool(input_text: str) -> str:
-    item, quantity = parse_item_and_quantity(input_text)
-    if inventory.has_item(item, quantity):
-        inventory.remove_item(item, quantity)
-        return f"The NPC gave away {quantity} '{item}'."
-    else:
-        return f"The NPC cannot give {quantity} '{item}' because it is not available."
-
-
-def add_item_tool(input_text: str) -> str:
-    item, quantity = parse_item_and_quantity(input_text)
-    inventory.add_item(item, quantity)
-    return f"The NPC received {quantity} '{item}'."
-
-
-def list_inventory_tool(_: str = "") -> str:
-    items = inventory.get_all_items()
-    if not items:
-        return "The NPC inventory is empty."
-    return "NPC Inventory:\n" + "\n".join([f"- {item} (x{qty})" for item, qty in items])
-
-"""

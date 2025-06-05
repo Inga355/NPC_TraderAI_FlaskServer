@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
 from agent_tools import tools, parse_trade_intent, trade_consent
+from inventory_store import execute_trade
 from prompt_generator import build_instructions, build_prompt, build_followup_prompt
-from memory_store import add_memory
+from memory_store import add_memory, store_trade_results, load_last_trade_results
 import json
 
 
@@ -49,6 +50,7 @@ def npc_chat():
     print(response.output)
     tool_calls = response.output
     results = []
+    
     last_tool_used = []
     trade_state = None
     buy_items = []
@@ -69,12 +71,18 @@ def npc_chat():
                         quantity = args["quantity"]
                         result = parse_trade_intent(trade_state, item, quantity)
                         results.append(result)
+                        store_trade_results(results)
                         last_tool_used = "parse_trade_intent"
 
                         if result["trade_state"] == "buy":
                             buy_items.append(result)       
                         elif result["trade_state"] == "sell":
                             sell_items.append(result)
+
+                        # Just for Debugging
+                        print(f"Results: {results}")
+                        print(f"Buy Items: {buy_items}")
+                        print(f"Sell Items: {sell_items}")    
                     
                     # Process tool call for trade consent
                     elif tool_call.name == "trade_consent":
@@ -108,19 +116,28 @@ def npc_chat():
     
     # Followup after tool trade_consent
     if last_tool_used == "trade_consent" and consent_result:
-        consent = consent_result["consent"]
+        player_consent = consent_result["Consent"]
+        print(f"Debugg PlayerConsent: {player_consent}")
 
         """
         Can later be improved by handling per GPT and adding sentiments
         """
-        if consent == "yes":
-        # execute_trade()
-            return "The trade has been confirmed and processed!"
+        if player_consent == "yes":
+            confirmations = []
+            results = load_last_trade_results(1)
+            print(f"ResultsHandling: {results}")
+            for result in results:
+                trade_state = result["trade_state"]
+                item_name = result["item"]
+                quantity = result["quantity"]
+                message = execute_trade(trade_state, item_name, quantity)
+                confirmations.append(message)         
+            return "\n".join(confirmations) + "\nPleasure doing business, matey!"
 
-        elif consent == "no":
+        elif player_consent == "no":
             return "Understood. The trade has been cancelled."
 
-        elif consent == "unsure":
+        elif player_consent == "unsure":
             return "I'm not sure if you're ready to trade. Let me know when you are!"
     
     # Output without tool call
