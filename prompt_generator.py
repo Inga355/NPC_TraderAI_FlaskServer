@@ -58,10 +58,8 @@ def build_prompt(player_input):
         - Do not use this tool unless the last assistant message was a clear trade confirmation question.
         - When the player responds, analyze whether their message confirms, denies, or is unsure about the trade.
         - Use the recent chat history to determine the connection between your question and their answer.
-        - Return 'yes' if the player clearly agrees (e.g., "Yes", "Sure", "Alright", "Let's do it").
-        - Return 'no' if the player explicitly refuses (e.g., "No", "I changed my mind").
-        - Return 'unsure' if the player's message is vague, indirect, or changes the terms 
-        (e.g., "Maybe", "Can I get just 2?", "What about pears?").
+       
+        
         - Never trigger 'trade_consent' preemptively or without a player response.
         - Do not assume consent based on context; always wait for an explicit player reply.
 

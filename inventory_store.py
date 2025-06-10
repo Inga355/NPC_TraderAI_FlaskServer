@@ -87,12 +87,6 @@ def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
         return f"No entity with '{id}' found."
     
 
-
-
-
-
-
-
 def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_path="inventory/inventory.sqlite3"):
     """
     Executes the trade: Player buys from or sells to NPC.

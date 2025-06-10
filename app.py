@@ -43,7 +43,7 @@ def npc_chat():
         tools=tools,
         tool_choice="auto" # LLM decides by itself to use tools or not
     )
-
+    print(response.usage.input_tokens)
     add_memory(text=(response.output_text), role="assistant")
     
     # Process the response and any tool calls
@@ -80,9 +80,9 @@ def npc_chat():
                             sell_items.append(result)
 
                         # Just for Debugging
-                        print(f"Results: {results}")
-                        print(f"Buy Items: {buy_items}")
-                        print(f"Sell Items: {sell_items}")    
+                        print(f"\033[94mResults: {results}\033[0m")
+                        print(f"\033[94mBuy Items: {buy_items}\033[0m")
+                        print(f"\033[94mSell Items: {sell_items}\033[0m")    
                     
                     # Process tool call for trade consent
                     elif tool_call.name == "trade_consent":
@@ -110,14 +110,14 @@ def npc_chat():
             input=followup_prompt
         )
 
-        print("Follow-up GPT Output:", followup_response.output)
+        print("\033[93mFollow-up GPT Output:\033[0m", followup_response.output)
         response_text = followup_response.output_text or "" 
         return response_text
     
     # Followup after tool trade_consent
     if last_tool_used == "trade_consent" and consent_result:
         player_consent = consent_result["Consent"]
-        print(f"Debugg PlayerConsent: {player_consent}")
+        print(f"\033[93mDebugg PlayerConsent: {player_consent}\033[0m")
 
         """
         Can later be improved by handling per GPT and adding sentiments
@@ -125,7 +125,7 @@ def npc_chat():
         if player_consent == "yes":
             confirmations = []
             results = load_last_trade_results(1)
-            print(f"ResultsHandling: {results}")
+            print(f"\033[92mResultsHandling: {results}\033[0m")
             for result in results:
                 trade_state = result["trade_state"]
                 item_name = result["item"]

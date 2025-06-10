@@ -3,12 +3,12 @@ def parse_trade_intent(trade_state: str="no trade", item: str="null", quantity: 
     item = item.lower()  # Convert to lowercase for consistency
     if item.endswith('s'):
         item = item[:-1]  # Remove trailing 's' for singular form
-    print("Function parse_trade_intet called!")    
+    print("\033[92mFunction parse_trade_intet called!\033[0m")    
     return {"trade_state": trade_state, "item": item, "quantity": quantity}
 
 
 def trade_consent(consent: str='unsure'):
-    print("Function trade_consent called!")
+    print("\033[92mFunction trade_consent called!\033[0m")
     return {"Consent": consent}
 
 
@@ -58,7 +58,7 @@ tools = [
             "Analyze the most recent chat history to determine whether the player's message is a direct response "
             "to a trade confirmation question from the previous assistant message. "
             "Use this tool only if the last assistant message asked the player to confirm a specific trade. "
-            "Return 'yes' if the player clearly agrees (e.g., 'Yes', 'Sure', 'Let's do it', 'Deal', 'ok', or similiar phrases). "
+            "Return 'yes' if the player clearly agrees (e.g., 'Yes', 'Sure', 'Let's do it', 'deal', 'ok', or similiar phrases). "
             "Return 'no' if the player explicitly refuses (e.g., 'No', 'I changed my mind', 'not today' or similiar phrases). "
             "Return 'unsure' if the player's message is unclear, indirect, or changes the terms (e.g., 'Maybe', "
             "'Can I get only 2 instead?', 'What about pears?')."
