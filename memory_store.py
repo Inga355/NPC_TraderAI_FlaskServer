@@ -1,5 +1,6 @@
 import os
 import chromadb
+import json
 import sqlite3
 import uuid
 from datetime import datetime
@@ -106,6 +107,44 @@ def get_recent_chat_messages(limit=20):
         history_lines.append(f"{role_name}: {text}")
 
     return "\n".join(history_lines)
+
+# Store function for trade intents in chat_history (after parse_trade_intent tool call)
+def store_trade_results(results, entity_id=1, db_path="inventory/inventory.sqlite3"):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO chat_history (timestamp, entity_id, role, text)
+        VALUES (?, ?, ?, ?)
+    """, (datetime.now(), entity_id, "system", json.dumps(results)))
+
+    conn.commit()
+    conn.close()
+    return "Results saved."
+
+
+# Loading function for the last stored trading intent
+def load_last_trade_results(entity_id=1, db_path="inventory/inventory.sqlite3"):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT text FROM chat_history
+        WHERE entity_id = ? AND role = 'system'
+        ORDER BY id DESC LIMIT 10
+    """, (entity_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    for (text,) in rows:
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list) and all("trade_state" in r for r in parsed):
+                return parsed
+        except json.JSONDecodeError:
+            continue
+
+    return []
 
 
 # Initalize OpenAi

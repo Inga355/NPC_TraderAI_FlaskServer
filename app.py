@@ -1,10 +1,12 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 import os
 from openai import OpenAI
-from agent_tools import tools, parse_item_and_quantity
-from inventory_store import get_all_items, get_entity_name, get_entity_role
-from memory_store import add_memory, get_memories_from_npc, get_memories_from_player, get_recent_chat_messages
+from agent_tools import tools, parse_trade_intent, trade_consent
+from inventory_store import execute_trade
+from prompt_generator import build_instructions, build_prompt, build_followup_prompt
+from memory_store import add_memory, store_trade_results, load_last_trade_results
+import json
 
 
 
@@ -18,70 +20,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 @app.route("/npc/chat")
 def home():
     return send_from_directory('testfrontend', 'chatwindow.html')
-
-
-"""# API Route: Get NPC Inventory
-@app.route("/npc/<int:npc_id>/inventory", methods=["GET"])
-def get_npc_inventory(npc_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT item_name, quantity FROM NPC_Inventory WHERE npc_id = ?", (npc_id,))
-    items = cursor.fetchall()
-    conn.close()
-    return jsonify([dict(item) for item in items])"""
-
-
-def build_instructions(id=1):
-    npc_name = get_entity_name(id)
-    npc_role = get_entity_role(id)
-    prompt = f"""
-Your name is {npc_name} and you are an NPC in a role-playing game with that role: {npc_role}. 
-You have a good memory and remember past conversations or important information. 
-Use the memories only if you decide that it is necessary to provide accurate context.
-Always check to use the tools if the player is asking for something.
-Stay completely in character according to your assigned role and background. Never explain your reasoning or break the fourth wall.
-"""
-    return prompt.strip()
-
-
-def build_prompt(player_input):
-    memories_player = get_memories_from_player(player_input)
-    memories_npc = get_memories_from_npc(player_input)
-
-    formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
-    print(formatted_memories_player)
-    formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
-    print(formatted_memories_npc)
-    formatted_chat_history = get_recent_chat_messages(limit=20)
-    print(formatted_chat_history)
-
-    inventory_npc = get_all_items(1)
-
-    prompt = f"""
-These are your memories of what the player has told you in the past:
-{formatted_memories_player}
-
-These are your memories of what you have told the player in the past:
-{formatted_memories_npc}
-
-These are the items you have to sell:
-{inventory_npc}
-
-Guidelines for trading:
-- Offer items selectively, not all at once.
-- Base your offers on the player's current behavior, interests, and needs expressed in the conversation.
-- Suggest items if they match the player's situation, but do not overwhelm the player with too many options.
-- If the player does not have enough money, suggest items that are affordable.
-
-This is your recent conversation with the player:
-{formatted_chat_history}
-
-Now the player is speaking to you. Respond appropriately, naturally, and in character.
-Use your memories if they help you better understand the player or the situation and if they are relevant to the conversation.
-
-Player says: "{player_input}"
-"""
-    return prompt.strip()
 
 
 # API Route: Chat with NPC (OpenAI)
@@ -105,45 +43,108 @@ def npc_chat():
         tools=tools,
         tool_choice="auto" # LLM decides by itself to use tools or not
     )
-
+    print(response.usage.input_tokens)
     add_memory(text=(response.output_text), role="assistant")
     
     # Process the response and any tool calls
     print(response.output)
     tool_calls = response.output
     results = []
+    
+    last_tool_used = []
+    trade_state = None
+    buy_items = []
+    sell_items = []
+    consent_result = []
 
+    # Check if any tool was called
     if tool_calls and isinstance(tool_calls, list):
         for tool_call in tool_calls:
             if hasattr(tool_call, "arguments"):
                 try:
                     args = json.loads(tool_call.arguments)
-                    result = parse_item_and_quantity(**args)
-                    results.append(result)
+                    
+                    # Process tool call for trade intent
+                    if tool_call.name == "parse_trade_intent":
+                        trade_state = args["trade_state"]
+                        item = args["item"]
+                        quantity = args["quantity"]
+                        result = parse_trade_intent(trade_state, item, quantity)
+                        results.append(result)
+                        store_trade_results(results)
+                        last_tool_used = "parse_trade_intent"
+
+                        if result["trade_state"] == "buy":
+                            buy_items.append(result)       
+                        elif result["trade_state"] == "sell":
+                            sell_items.append(result)
+
+                        # Just for Debugging
+                        print(f"\033[94mResults: {results}\033[0m")
+                        print(f"\033[94mBuy Items: {buy_items}\033[0m")
+                        print(f"\033[94mSell Items: {sell_items}\033[0m")    
+                    
+                    # Process tool call for trade consent
+                    elif tool_call.name == "trade_consent":
+                        consent = args["consent"]
+                        consent_result = trade_consent(consent)
+                        last_tool_used = "trade_consent"
+                        print(f"Consent Result: {consent_result}")
+                    
+                    else:
+                        print(f"Unknown Tool: {tool_call.name}")
+
                 except Exception as e:
-                    print(f"Fehler beim Verarbeiten der Tool-Argumente: {e}")
+                    print(f"Error processing tool arguments: {e}")
             else:
-                print("Tool-Call ohne arguments-Feld erkannt.")
+                print("Tool call without arguments field detected!")
+   
+    # Followup after tool parse_trade_intent
+    if last_tool_used == "parse_trade_intent" and results:  
+        followup_prompt = build_followup_prompt(buy_items, sell_items)
 
-    for result in results:
-        print("ToolOutput:",result)
-
-    response_text = response.output_text
-
-    if response_text == '':
+        # New API call to execute confirmation call
         followup_response = client.responses.create(
             model="gpt-4o",
             instructions=role_instruction,
-            input=message
+            input=followup_prompt
         )
 
-        print(f"I have used a tool.")
-
-        followup_response_text = followup_response.output_text
-        return followup_response_text
-    else:
+        print("\033[93mFollow-up GPT Output:\033[0m", followup_response.output)
+        response_text = followup_response.output_text or "" 
         return response_text
+    
+    # Followup after tool trade_consent
+    if last_tool_used == "trade_consent" and consent_result:
+        player_consent = consent_result["Consent"]
+        print(f"\033[93mDebugg PlayerConsent: {player_consent}\033[0m")
 
+        """
+        Can later be improved by handling per GPT and adding sentiments
+        """
+        if player_consent == "yes":
+            confirmations = []
+            results = load_last_trade_results(1)
+            print(f"\033[92mResultsHandling: {results}\033[0m")
+            for result in results:
+                trade_state = result["trade_state"]
+                item_name = result["item"]
+                quantity = result["quantity"]
+                message = execute_trade(trade_state, item_name, quantity)
+                confirmations.append(message)         
+            return "\n".join(confirmations) + "\nPleasure doing business, matey!"
+
+        elif player_consent == "no":
+            return "Understood. The trade has been cancelled."
+
+        elif player_consent == "unsure":
+            return "I'm not sure if you're ready to trade. Let me know when you are!"
+    
+    # Output without tool call
+    else:
+        return response.output_text
+    
+ 
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)

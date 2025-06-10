@@ -1,4 +1,6 @@
 import sqlite3
+import json
+from datetime import datetime
 
 
 def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
@@ -85,7 +87,78 @@ def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
         return f"No entity with '{id}' found."
     
 
+def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_path="inventory/inventory.sqlite3"):
+    """
+    Executes the trade: Player buys from or sells to NPC.
+    Adjust quantities in inventory and returns a confirmation message.
+    """
 
-print(get_all_items(1))
-print(get_entity_name(1))
-print(get_entity_role(1))
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Get item id
+    cursor.execute("SELECT id FROM items WHERE name = ?", (item_name,))
+    item_row = cursor.fetchone()
+    if not item_row:
+        conn.close()
+        return f"Arrr, I ain't got no '{item_name}' in me ledgers!"
+    item_id = item_row[0]
+
+    # Get price
+    cursor.execute("SELECT price FROM prices WHERE item_id = ?", (item_id,))
+    price_row = cursor.fetchone()
+    price_per_unit = price_row[0] if price_row else 0
+    total_price = price_per_unit * quantity
+
+    # Helper: Inventory check
+    def get_quantity(entity_id):
+        cursor.execute("""
+            SELECT quantity FROM inventory WHERE entity_id = ? AND item_id = ?
+        """, (entity_id, item_id))
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+    # Helper: Inventory update
+    def update_inventory(entity_id, delta_qty):
+        current_qty = get_quantity(entity_id)
+        new_qty = current_qty + delta_qty
+        if current_qty == 0:
+            cursor.execute("""
+                INSERT INTO inventory (entity_id, item_id, quantity)
+                VALUES (?, ?, ?)
+            """, (entity_id, item_id, max(new_qty, 0)))
+        else:
+            cursor.execute("""
+                UPDATE inventory SET quantity = ?
+                WHERE entity_id = ? AND item_id = ?
+            """, (max(new_qty, 0), entity_id, item_id))
+
+    # Trading logic
+    if trade_state == "buy":
+        npc_stock = get_quantity(npc_id)
+        if npc_stock < quantity:
+            conn.close()
+            return f"Arrr, I only got {npc_stock} {item_name}(s) in me stash!"
+
+        update_inventory(npc_id, -quantity)
+        update_inventory(player_id, quantity)
+        conn.commit()
+        conn.close()
+        return f"Ye bought {quantity} {item_name}(s) for {total_price:.2f} gold."
+
+    elif trade_state == "sell":
+        player_stock = get_quantity(player_id)
+        if player_stock < quantity:
+            conn.close()
+            return f"Ye trying to cheat me? Ye only got {player_stock} {item_name}(s)!"
+
+        update_inventory(player_id, -quantity)
+        update_inventory(npc_id, quantity)
+        conn.commit()
+        conn.close()
+        return f"Sold {quantity} {item_name}(s) for {total_price:.2f} gold. Ye drive a hard bargain!"
+
+    else:
+        conn.close()
+        return "I don't understand if ye be buyin' or sellin', matey!"
+
