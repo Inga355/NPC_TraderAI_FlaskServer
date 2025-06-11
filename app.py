@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, jsonify
 from flask_cors import CORS
 import os
 from openai import OpenAI
@@ -25,7 +25,10 @@ def home():
 # API Route: Chat with NPC (OpenAI)
 @app.route("/npc/chat", methods=["POST"])
 def npc_chat():
-    player_message = request.form.get("userpromt", "")
+    #player_message = request.form.get("userpromt", "")
+    data = request.get_json()
+    player_message = data.get("Message", "")
+    print(f"PlayerMessage: {player_message}")
 
     if not player_message:
         return "Please provide a message", 400
@@ -112,7 +115,8 @@ def npc_chat():
 
         print("\033[93mFollow-up GPT Output:\033[0m", followup_response.output)
         response_text = followup_response.output_text or "" 
-        return response_text
+        #return response_text
+        return jsonify({"response": response_text})
     
     # Followup after tool trade_consent
     if last_tool_used == "trade_consent" and consent_result:
@@ -132,17 +136,21 @@ def npc_chat():
                 quantity = result["quantity"]
                 message = execute_trade(trade_state, item_name, quantity)
                 confirmations.append(message)         
-            return "\n".join(confirmations) + "\nPleasure doing business, matey!"
+            #return "\n".join(confirmations) + "\nPleasure doing business, matey!"
+            return jsonify({"response": "\n".join(confirmations) + "\nPleasure doing business, matey!"})
 
         elif player_consent == "no":
-            return "Understood. The trade has been cancelled."
+            #return "Understood. The trade has been cancelled."
+            return jsonify({"response": "Understood. The trade has been cancelled."})
 
         elif player_consent == "unsure":
-            return "I'm not sure if you're ready to trade. Let me know when you are!"
+            #return "I'm not sure if you're ready to trade. Let me know when you are!"
+            return jsonify({"response": "I'm not sure if you're ready to trade. Let me know when you are!"})
     
     # Output without tool call
     else:
-        return response.output_text
+        #return response.output_text
+        return jsonify({"response": response.output_text})
     
  
 
