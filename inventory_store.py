@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from datetime import datetime
+from flask import jsonify
 
 
 def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
@@ -96,7 +97,6 @@ def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_pa
     Executes the trade: Player buys from or sells to NPC.
     Adjust quantities in inventory and returns a confirmation message.
     """
-
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -126,7 +126,7 @@ def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_pa
     def update_inventory(entity_id, delta_qty):
         current_qty = get_quantity(entity_id)
         new_qty = current_qty + delta_qty
-        if current_qty == 0:
+        if current_qty is None:
             cursor.execute("""
                 INSERT INTO inventory (entity_id, item_id, quantity)
                 VALUES (?, ?, ?)
@@ -166,3 +166,39 @@ def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_pa
         conn.close()
         return "I don't understand if ye be buyin' or sellin', matey!"
 
+
+#--------------------------------------------------------------------------------------
+# Get the player Inventory from Database to display ingame
+#--------------------------------------------------------------------------------------
+
+def get_inventory(entity_id, db_path="inventory/inventory.sqlite3"):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            i.name AS item_name,
+            inv.quantity,
+            IFNULL(p.price, 0) AS price
+        FROM inventory inv
+        JOIN entities e ON inv.entity_id = e.id
+        JOIN items i ON inv.item_id = i.id
+        LEFT JOIN prices p ON p.item_id = i.id
+        WHERE e.id = ?
+    """, (entity_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return jsonify({"error": "No inventory found for this entity."}), 404
+
+    inventory = []
+    for item_name, quantity, price in rows:
+        inventory.append({
+            "name": item_name,
+            "quantity": quantity,
+            "price": round(price, 2)
+        })
+
+    return jsonify({"entity_id": entity_id, "inventory": inventory})

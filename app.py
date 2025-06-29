@@ -3,11 +3,10 @@ from flask_cors import CORS
 import os
 from openai import OpenAI
 from agent_tools import tools, parse_trade_intent, trade_consent
-from inventory_store import execute_trade
+from inventory_store import execute_trade, get_inventory
 from prompt_generator import build_instructions, build_prompt, build_followup_prompt
 from memory_store import add_memory, store_trade_results, load_last_trade_results
 import json
-
 
 
 app = Flask(__name__, static_folder='testfrontend')
@@ -16,18 +15,24 @@ CORS(app)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
+#--------------------------------------------------------------------------------------
 # API Route: Serve the chat interface
+#--------------------------------------------------------------------------------------
+
 @app.route("/npc/chat")
 def home():
     return send_from_directory('testfrontend', 'chatwindow.html')
 
 
+#--------------------------------------------------------------------------------------
 # API Route: Chat with NPC (OpenAI)
+#--------------------------------------------------------------------------------------
+
 @app.route("/npc/chat", methods=["POST"])
 def npc_chat():
-    #player_message = request.form.get("userpromt", "")
-    data = request.get_json()
-    player_message = data.get("Message", "")
+    player_message = request.form.get("userpromt", "")
+    #data = request.get_json()
+    #player_message = data.get("message", "")
     print(f"PlayerMessage: {player_message}")
 
     if not player_message:
@@ -115,8 +120,8 @@ def npc_chat():
 
         print("\033[93mFollow-up GPT Output:\033[0m", followup_response.output)
         response_text = followup_response.output_text or "" 
-        #return response_text
-        return jsonify({"response": response_text})
+        return response_text
+        #return jsonify({"response": response_text})
     
     # Followup after tool trade_consent
     if last_tool_used == "trade_consent" and consent_result:
@@ -136,23 +141,31 @@ def npc_chat():
                 quantity = result["quantity"]
                 message = execute_trade(trade_state, item_name, quantity)
                 confirmations.append(message)         
-            #return "\n".join(confirmations) + "\nPleasure doing business, matey!"
-            return jsonify({"response": "\n".join(confirmations) + "\nPleasure doing business, matey!"})
+            return "\n".join(confirmations) + "\nPleasure doing business, matey!"
+            #return jsonify({"response": "\n".join(confirmations) + "\nPleasure doing business, matey!"})
 
         elif player_consent == "no":
-            #return "Understood. The trade has been cancelled."
-            return jsonify({"response": "Understood. The trade has been cancelled."})
+            return "Understood. The trade has been cancelled."
+            #return jsonify({"response": "Understood. The trade has been cancelled."})
 
         elif player_consent == "unsure":
-            #return "I'm not sure if you're ready to trade. Let me know when you are!"
-            return jsonify({"response": "I'm not sure if you're ready to trade. Let me know when you are!"})
+            return "I'm not sure if you're ready to trade. Let me know when you are!"
+            #return jsonify({"response": "I'm not sure if you're ready to trade. Let me know when you are!"})
     
     # Output without tool call
     else:
-        #return response.output_text
-        return jsonify({"response": response.output_text})
+        return response.output_text
+        #return jsonify({"response": response.output_text})
+   
     
- 
+#--------------------------------------------------------------------------------------
+# API Route: Serve the inventory from Database
+#-------------------------------------------------------------------------------------- 
+
+@app.route('/api/inventory/<entity_id>', methods=['GET'])
+def api_get_inventory(entity_id):
+    return get_inventory(entity_id)
+
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
