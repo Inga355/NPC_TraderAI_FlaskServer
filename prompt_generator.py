@@ -2,10 +2,7 @@
 # prompt_generator.py – Builds prompt logic and context for NPC conversations
 #--------------------------------------------------------------------------------------
 
-
-import json
 import re
-from agent_tools import parse_trade_intent
 from typing import List, Dict
 from inventory_store import get_all_items, get_entity_name, get_entity_role
 from memory_store import format_chat_history_as_json, get_recent_chat_messages
@@ -50,8 +47,7 @@ def build_prompt(player_input):
     formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
     """
 
-    formatted_chat_history = get_recent_chat_messages(limit=20)
-    chat_history_json = format_chat_history_as_json
+    chat_history_json = format_chat_history_as_json(limit=20)
     inventory_npc = get_all_items(1) # id hardcoded for now, will be changed to dynamic later
 
     prompt = f"""
@@ -87,7 +83,7 @@ def build_followup_prompt(buy_items, sell_items):
     """
     Builds a prompt to ask the player to confirm trade actions previously parsed.
     """
-    formatted_chat_history_followup = get_recent_chat_messages(limit=6)
+    chat_history_followup = get_recent_chat_messages(limit=6)
 
     prompt = f"""
         The player has expressed an intent to buy {buy_items} and sell {sell_items}.
@@ -95,7 +91,7 @@ def build_followup_prompt(buy_items, sell_items):
         If both are empty, do not ask for confirmation. If there are many items, ask for confirmation for each item.
 
         This is the recent conversation with the player. Use it to determine the context about what the player asked for.
-        {formatted_chat_history_followup}
+        {chat_history_followup}
 
         Make sure to:
         - Ask the question clearly, such as: 'Are you sure you want to buy 5 apples and sell 2 swords? Let's make a deal!'
@@ -104,7 +100,7 @@ def build_followup_prompt(buy_items, sell_items):
 
 
 #--------------------------------------------------------------------------------------
-# Infer trade intent heuristically from recent chat messages
+# Infer trade intent heuristically from recent chat messages (still in testing phase)
 #--------------------------------------------------------------------------------------
 
 def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
@@ -148,3 +144,4 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
                 inferred[item] = inventory[item]
 
     return inferred
+
