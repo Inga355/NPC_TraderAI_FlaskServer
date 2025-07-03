@@ -1,3 +1,8 @@
+#--------------------------------------------------------------------------------------
+# prompt_generator.py – Builds prompt logic and context for NPC conversations
+#--------------------------------------------------------------------------------------
+
+
 import json
 import re
 from agent_tools import parse_trade_intent
@@ -6,7 +11,14 @@ from inventory_store import get_all_items, get_entity_name, get_entity_role
 from memory_store import format_chat_history_as_json, get_recent_chat_messages
 
 
-def build_instructions(id=1):
+#--------------------------------------------------------------------------------------
+# Build role-specific instruction prompt for the LLM
+#--------------------------------------------------------------------------------------
+
+def build_instructions(id=1): # id hardcoded for now, will be changed to dynamic later
+    """
+    Returns a string of system-level instructions defining the NPC's name, role, and behavior.
+    """
     npc_name = get_entity_name(id)
     npc_role = get_entity_role(id)
     prompt = f"""
@@ -16,20 +28,31 @@ def build_instructions(id=1):
         Always check to use the tools if the player is asking for something.
         You are in an ongoing conversation with a player—stay completely in character according to your assigned role and background.
         Never explain your reasoning or break the fourth wall.
-        """
+    """
     return prompt.strip()
 
 
+#--------------------------------------------------------------------------------------
+# Build initial prompt using chat history and inventory
+#--------------------------------------------------------------------------------------
+
 def build_prompt(player_input):
-    """memories_player = get_memories_from_player(player_input)
+    """
+    Creates a prompt including chat memory and NPC inventory, formatted for OpenAI input.
+    """
+
+    # Uncomment if ChromaDB is enabled (semantic chat history, still in testing phase)
+    """
+    memories_player = get_memories_from_player(player_input)
     memories_npc = get_memories_from_npc(player_input)
 
     formatted_memories_player = "\n".join(f"- {m}" for m in memories_player)
     formatted_memories_npc = "\n".join(f"- {m}" for m in memories_npc)
     """
+
     formatted_chat_history = get_recent_chat_messages(limit=20)
     chat_history_json = format_chat_history_as_json
-    inventory_npc = get_all_items(1)
+    inventory_npc = get_all_items(1) # id hardcoded for now, will be changed to dynamic later
 
     prompt = f"""
         This is your latest chat history with the player. Use this as memory and for context.
@@ -52,12 +75,18 @@ def build_prompt(player_input):
         Now the player is speaking to you. Respond appropriately, naturally, and in character.
 
         Player says: "{player_input}"
-"""
-
+    """
     return prompt.strip()
 
 
+#--------------------------------------------------------------------------------------
+# Build follow-up confirmation prompt after a trade tool call
+#--------------------------------------------------------------------------------------
+
 def build_followup_prompt(buy_items, sell_items):
+    """
+    Builds a prompt to ask the player to confirm trade actions previously parsed.
+    """
     formatted_chat_history_followup = get_recent_chat_messages(limit=6)
 
     prompt = f"""
@@ -74,10 +103,14 @@ def build_followup_prompt(buy_items, sell_items):
     return prompt.strip()
 
 
+#--------------------------------------------------------------------------------------
+# Infer trade intent heuristically from recent chat messages
+#--------------------------------------------------------------------------------------
+
 def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
     """
-    Try to use recent chat history to determine which items the player is likely to want to purchase and how many are available.
-    Only valid inventory items will be considered.
+    Tries to infer desired trade items and quantities based on recent chat input.
+    Only returns items found in inventory.
     """
     chat_history = get_recent_chat_messages(limit=2)
     inferred = {}
@@ -100,7 +133,7 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
 
     # Looking for quantities and items
     for item in inventory:
-        # Erlaube Varianten wie "5 apples", "five apples", "give me 2 apples"
+        # Allow variants like "5 apples", "five apples", "give me 2 apples"
         pattern = rf"(\\d+)\\s+{item}"
         match = re.search(pattern, last_player_line)
         if match:
