@@ -1,14 +1,25 @@
+#--------------------------------------------------------------------------------------
+# inventory_store.py – Handles database interaction for entities, items, and trades
+#--------------------------------------------------------------------------------------
+
 import sqlite3
 import json
 from datetime import datetime
 from flask import jsonify
 
 
+#--------------------------------------------------------------------------------------
+# Get all inventory items for a specific entity
+#--------------------------------------------------------------------------------------
+
 def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
+    """
+    Returns a formatted string listing all items, quantities, and prices in the inventory of the given entity.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # SQL: Entity, Item-Namen, Menge, Preis abrufen
+    # SQL: Entity, Item-Name, Quantity, Price
     cursor.execute("""
         SELECT
             i.name AS item_name,
@@ -35,7 +46,14 @@ def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
     return "\n".join(output)
 
 
+#--------------------------------------------------------------------------------------
+# Insert a new item into the database
+#--------------------------------------------------------------------------------------
+
 def insert_item(name, description="", db_path="inventory/inventory.sqlite3"):
+    """
+    Inserts a new item into the items table.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -52,7 +70,14 @@ def insert_item(name, description="", db_path="inventory/inventory.sqlite3"):
         conn.close()
 
 
+#--------------------------------------------------------------------------------------
+# Retrieve the name and role of an entity by ID
+#--------------------------------------------------------------------------------------
+
 def get_entity_name(id, db_path="inventory/inventory.sqlite3"):
+    """
+    Retrieves the name of the entity with the given ID.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -71,6 +96,9 @@ def get_entity_name(id, db_path="inventory/inventory.sqlite3"):
 
 
 def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
+    """
+    Retrieves the role of the entity with the given ID.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -89,13 +117,12 @@ def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
     
 
 #--------------------------------------------------------------------------------------
-# Handle the trade by updating DB and givng confirmation to player
+# Execute trade transaction (buy or sell) and update the database
 #--------------------------------------------------------------------------------------
 
 def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_path="inventory/inventory.sqlite3"):
     """
-    Executes the trade: Player buys from or sells to NPC.
-    Adjust quantities in inventory and returns a confirmation message.
+    Executes the trade by updating inventory quantities and returns confirmation message.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -168,10 +195,13 @@ def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_pa
 
 
 #--------------------------------------------------------------------------------------
-# Get the player Inventory from Database to display ingame
+# Retrieve inventory for a given entity and return as JSON (used in API)
 #--------------------------------------------------------------------------------------
 
 def get_inventory(entity_id, db_path="inventory/inventory.sqlite3"):
+    """
+    Returns the inventory of an entity in JSON format.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
