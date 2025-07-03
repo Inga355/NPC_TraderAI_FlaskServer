@@ -127,7 +127,6 @@ def npc_chat():
     if last_tool_used == "trade_consent" and consent_result:
         player_consent = consent_result["Consent"]
         print(f"\033[93mDebugg PlayerConsent: {player_consent}\033[0m")
-
         """
         Can later be improved by handling per GPT and adding sentiments
         """

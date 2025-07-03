@@ -1,17 +1,29 @@
+#--------------------------------------------------------------------------------------
+# agent_tools.py – Tool Definitions for Trade Intent and Consent Parsing
+#--------------------------------------------------------------------------------------
+
 def parse_trade_intent(trade_state: str="no trade", item: str="null", quantity: int=0):
-    # Handle plural forms
-    item = item.lower()  # Convert to lowercase for consistency
+    """
+    Parses trade intent and normalizes item name.
+    """
+    item = item.lower()
     if item.endswith('s'):
-        item = item[:-1]  # Remove trailing 's' for singular form
+        item = item[:-1]
     print("\033[92mFunction parse_trade_intet called!\033[0m")    
     return {"trade_state": trade_state, "item": item, "quantity": quantity}
 
 
 def trade_consent(consent: str='unsure'):
+    """
+    Handles consent responses from player for trade confirmation.
+    """
     print("\033[92mFunction trade_consent called!\033[0m")
     return {"Consent": consent}
 
 
+#--------------------------------------------------------------------------------------
+# Tool Definitions for OpenAI Function Calling
+#--------------------------------------------------------------------------------------
 
 tools = [ 
     {
