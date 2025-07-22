@@ -111,9 +111,9 @@
                     });
 
                     if (response.ok) {
-                        const data = await response.text();
+                        const data = await response.json();
                         // Add NPC response to chat
-                        addMessage(data, 'npc');
+                        addNpcMessage(data.text, data.audio_url);
                     } else {
                         addMessage('Sorry, there was an error processing your message. Please try again.', 'npc');
                     }
@@ -135,6 +135,9 @@
 
         function addNpcMessage(text, audioUrl) {
             const messagesDiv = document.getElementById('chatMessages');
+
+            const oldButtons = messagesDiv.querySelectorAll('.play-button');
+            oldButtons.forEach(btn => btn.remove());
 
             const messageDiv = document.createElement('div');
             messageDiv.className = `message npc-message`;
