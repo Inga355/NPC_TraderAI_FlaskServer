@@ -2,6 +2,7 @@
 # app.py – Main Flask application handling routes and AI chat logic
 #--------------------------------------------------------------------------------------
 
+from dotenv import load_dotenv
 from flask import Flask, request, send_from_directory, jsonify, send_file, url_for
 from flask_cors import CORS
 import os
@@ -20,6 +21,8 @@ import json
 
 app = Flask(__name__, static_folder='testfrontend')
 CORS(app)
+
+load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route("/npc/chat")
@@ -33,7 +36,13 @@ def home():
 
 @app.route("/npc/chat", methods=["POST"])
 def chat():
-    player_message_form = request.form.get("userpromt", "")
+    player_message_form = request.form.get("userprompt", "")
+
+    # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
+    """
+    data = request.get_json()
+    player_message_form = data.get("message", "")
+    """
     npc_response = npc_chat(player_message_form)
     with open("npc_response.txt", "w") as f:
         f.write(npc_response)
@@ -49,16 +58,7 @@ def get_audio(filename):
     return send_file(audio_path, mimetype='audio/mpeg')
 
 
-def npc_chat(player_message_form):
-
-    #player_message = request.form.get("userpromt", "")
-    player_message = player_message_form
-    # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-    """
-    data = request.get_json()
-    player_message = data.get("message", "")
-    """
-
+def npc_chat(player_message):
     print(f"PlayerMessage: {player_message}") # Debugging
 
     if not player_message:

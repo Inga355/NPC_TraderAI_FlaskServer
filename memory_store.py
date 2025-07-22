@@ -9,12 +9,14 @@ import sqlite3
 import uuid
 from datetime import datetime
 from openai import OpenAI
+from dotenv import load_dotenv
 
 
 #--------------------------------------------------------------------------------------
 # Configuration and Clients
 #--------------------------------------------------------------------------------------
 
+load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 db_path = "inventory/inventory.sqlite3"
 

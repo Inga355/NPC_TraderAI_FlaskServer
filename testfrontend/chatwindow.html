@@ -45,7 +45,7 @@
             background-color: #f8f9fa;
             border-top: 1px solid #dee2e6;
         }
-        #userpromt {
+        #userprompt {
             flex: 1;
             padding: 10px;
             border: 1px solid #dee2e6;
@@ -83,7 +83,7 @@
             <!-- Messages will be added here dynamically -->
         </div>
         <form id="chatForm" class="chat-input">
-            <input type="text" name="userpromt" id="userpromt" placeholder="Type your message here..." required>
+            <input type="text" name="userprompt" id="userprompt" placeholder="Type your message here..." required>
             <button type="submit">Send</button>
         </form>
     </div>
@@ -92,7 +92,7 @@
         document.getElementById('chatForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const userInput = document.getElementById('userpromt');
+            const userInput = document.getElementById('userprompt');
             const message = userInput.value.trim();
             
             if (message) {
@@ -107,7 +107,7 @@
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        body: `userpromt=${encodeURIComponent(message)}`
+                        body: `userprompt=${encodeURIComponent(message)}`
                     });
 
                     if (response.ok) {
