@@ -172,3 +172,11 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Temporary audio file
+speech.wav
+
+# Temporary text file
+npc_response.txt
+
+

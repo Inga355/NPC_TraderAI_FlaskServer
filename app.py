@@ -2,10 +2,11 @@
 # app.py – Main Flask application handling routes and AI chat logic
 #--------------------------------------------------------------------------------------
 
-from flask import Flask, request, send_from_directory, jsonify
+from flask import Flask, request, send_from_directory, jsonify, send_file, url_for
 from flask_cors import CORS
 import os
 from openai import OpenAI
+from pathlib import Path
 from agent_tools import tools, parse_trade_intent, trade_consent
 from inventory_store import execute_trade, get_inventory
 from prompt_generator import build_instructions, build_prompt, build_followup_prompt
@@ -14,7 +15,7 @@ import json
 
 
 #--------------------------------------------------------------------------------------
-# Flask App Setup and Serve Chat Interface HTML
+# Flask App Setup, OpenAI Client and Serve Chat Interface HTML
 #--------------------------------------------------------------------------------------
 
 app = Flask(__name__, static_folder='testfrontend')
@@ -31,9 +32,27 @@ def home():
 #--------------------------------------------------------------------------------------
 
 @app.route("/npc/chat", methods=["POST"])
-def npc_chat():
-    player_message = request.form.get("userpromt", "")
+def chat():
+    player_message_form = request.form.get("userpromt", "")
+    npc_response = npc_chat(player_message_form)
+    with open("npc_response.txt", "w") as f:
+        f.write(npc_response)
+    audio_path = Path("speech.wav")
+    return jsonify({
+        "text": npc_response,
+        "audio_url": url_for('get_audio', filename=audio_path.name, _external=True)
+    })
 
+@app.route('/api/audio/<filename>')
+def get_audio(filename):
+    audio_path = Path(filename)
+    return send_file(audio_path, mimetype='audio/mpeg')
+
+
+def npc_chat(player_message_form):
+
+    #player_message = request.form.get("userpromt", "")
+    player_message = player_message_form
     # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
     """
     data = request.get_json()
@@ -126,8 +145,9 @@ def npc_chat():
         )
 
         print("\033[93mFollow-up GPT Output:\033[0m", followup_response.output) # Debugging
-        response_text = followup_response.output_text or "" 
-        return response_text
+        npc_text = followup_response.output_text or ""
+        npc_voice_chat(npc_text)
+        return npc_text
         # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
         """
         return jsonify({"response": response_text})
@@ -147,22 +167,29 @@ def npc_chat():
                 item_name = result["item"]
                 quantity = result["quantity"]
                 message = execute_trade(trade_state, item_name, quantity)
-                confirmations.append(message)         
-            return "\n".join(confirmations) + "\nPleasure doing business, matey!"
+                confirmations.append(message)
+            npc_text_yes = "\n".join(confirmations) + "\nPleasure doing business, matey!"
+            print(f"TTS INPUT: {npc_text_yes}")
+            npc_voice_chat(npc_text_yes)    
+            return npc_text_yes
             # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
             """
             return jsonify({"response": "\n".join(confirmations) + "\nPleasure doing business, matey!"})
             """
 
         elif player_consent == "no":
-            return "Understood. The trade has been cancelled."
+            npc_text_no = "Understood. The trade has been cancelled."
+            npc_voice_chat(npc_text_no)
+            return npc_text_no
             # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
             """
             return jsonify({"response": "Understood. The trade has been cancelled."})
             """
 
         elif player_consent == "unsure":
-            return "I'm not sure if you're ready to trade. Let me know when you are!"
+            npc_text_unsure = "I'm not sure if you're ready to trade. Let me know when you are!"
+            npc_voice_chat(npc_text_unsure)
+            return npc_text_unsure
             # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
             """
             return jsonify({"response": "I'm not sure if you're ready to trade. Let me know when you are!"})
@@ -170,13 +197,56 @@ def npc_chat():
     
     # Output without tool call
     else:
-        return response.output_text
+        print(response.output_text)
+        response = response.output_text
+        npc_voice_chat(response)
+        return response
         # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
         """
         return jsonify({"response": response.output_text})
         """
    
+
+
+#--------------------------------------------------------------------------------------
+# Generate speech from the NPC response and return as audio file
+#--------------------------------------------------------------------------------------
+
+def npc_voice_chat(npc_response):
+    speech_file_path = Path(__file__).parent / "speech.wav"
+    text_to_speech = npc_response
+
+    with client.audio.speech.with_streaming_response.create(
+        model="gpt-4o-mini-tts",
+        voice="ash",
+        input=text_to_speech,
+        instructions="Speak like a snarky pirate.",
+    ) as response:
+        response.stream_to_file(speech_file_path)
+
+    print(f"NPC voice saved to {speech_file_path}")
+
+    return send_file(
+        speech_file_path,
+        mimetype="audio/mpeg",
+        as_attachment=False,
+        download_name="npc_voice.wav"
+    )
     
+#--------------------------------------------------------------------------------------
+# Serve SoundFile via API
+#-------------------------------------------------------------------------------------- 
+
+@app.route("/api/audio")
+def sound():
+    speech_file_path = Path(__file__).parent / "speech.wav"
+    return send_file(
+        speech_file_path,
+        mimetype="audio/mpeg",
+        as_attachment=False,
+        download_name="npc_voice.wav"
+    )
+
 #--------------------------------------------------------------------------------------
 # Serve Inventory via API
 #-------------------------------------------------------------------------------------- 

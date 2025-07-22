@@ -25,6 +25,9 @@ def build_instructions(id=1): # id hardcoded for now, will be changed to dynamic
         Always check to use the tools if the player is asking for something.
         You are in an ongoing conversation with a player—stay completely in character according to your assigned role and background.
         Never explain your reasoning or break the fourth wall.
+        Respond in plain text only.
+        Do not use emojis, symbols, or special Unicode characters.
+        Avoid any non-verbal expressions like 😊, 🌀, etc.
     """
     return prompt.strip()
 
