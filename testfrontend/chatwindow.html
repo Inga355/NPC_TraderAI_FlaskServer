@@ -65,6 +65,16 @@
         button:hover {
             background-color: #0073e6;
         }
+        .play-button {
+            margin-top: 5px;
+            padding: 6px 12px;
+            font-size: 0.9em;
+            background-color: #6c757d;
+            border-radius: 12px;
+        }
+        .play-button:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -120,6 +130,29 @@
             messageDiv.className = `message ${sender}-message`;
             messageDiv.textContent = text;
             messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addNpcMessage(text, audioUrl) {
+            const messagesDiv = document.getElementById('chatMessages');
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message npc-message`;
+            messageDiv.textContent = text;
+
+            messagesDiv.appendChild(messageDiv);
+
+            if (audioUrl) {
+                const playBtn = document.createElement('button');
+                playBtn.textContent = '🔊 Audio abspielen';
+                playBtn.className = 'play-button';
+                playBtn.onclick = () => {
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                };
+                messagesDiv.appendChild(playBtn);
+            }
+
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
     </script>
