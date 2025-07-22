@@ -237,7 +237,7 @@ def npc_voice_chat(npc_response):
 # Serve SoundFile via API
 #-------------------------------------------------------------------------------------- 
 
-@app.route("/api/audio_test")
+@app.route("/api/audio")
 def sound():
     speech_file_path = Path(__file__).parent / "speech.wav"
     return send_file(
