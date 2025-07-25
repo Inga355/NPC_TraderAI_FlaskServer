@@ -13,6 +13,7 @@ from inventory_store import execute_trade, get_inventory
 from prompt_generator import build_instructions, build_prompt, build_followup_prompt
 from memory_store import add_memory, store_trade_results, load_last_trade_results
 import json
+import subprocess
 
 
 #--------------------------------------------------------------------------------------
@@ -37,16 +38,15 @@ def home():
 @app.route("/npc/chat", methods=["POST"])
 def chat():
     player_message_form = request.form.get("userprompt", "")
-
     # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-    """
-    data = request.get_json()
-    player_message_form = data.get("message", "")
-    """
+    
+    #data = request.get_json()
+    #player_message_form = data.get("message", "")
+    
     npc_response = npc_chat(player_message_form)
     with open("npc_response.txt", "w") as f:
         f.write(npc_response)
-    audio_path = Path("speech.wav")
+    audio_path = Path("speech.mp3")
     return jsonify({
         "text": npc_response,
         "audio_url": url_for('get_audio', filename=audio_path.name, _external=True)
@@ -57,6 +57,10 @@ def get_audio(filename):
     audio_path = Path(filename)
     return send_file(audio_path, mimetype='audio/mpeg')
 
+
+#--------------------------------------------------------------------------------------
+# Main Function – Handles NPC Conversation and Tool Responses
+#--------------------------------------------------------------------------------------
 
 def npc_chat(player_message):
     print(f"PlayerMessage: {player_message}") # Debugging
@@ -77,14 +81,12 @@ def npc_chat(player_message):
         tools=tools,
         tool_choice="auto"
     )
-    print(response.usage.input_tokens) # Debugging
     add_memory(text=(response.output_text), role="assistant")
     
     # Process the response and any tool calls
     print(response.output) # Debugging
     tool_calls = response.output
     results = []
-    
     last_tool_used = []
     trade_state = None
     buy_items = []
@@ -213,38 +215,54 @@ def npc_chat(player_message):
 #--------------------------------------------------------------------------------------
 
 def npc_voice_chat(npc_response):
-    speech_file_path = Path(__file__).parent / "speech.wav"
+    raw_mp3 = Path(__file__).parent / "speech.mp3"
+    final_mp3 = Path("C:/UnrealSounds/speech.mp3")
     text_to_speech = npc_response
 
     with client.audio.speech.with_streaming_response.create(
         model="gpt-4o-mini-tts",
         voice="ash",
         input=text_to_speech,
+        response_format="mp3",
         instructions="Speak like a snarky pirate.",
     ) as response:
-        response.stream_to_file(speech_file_path)
+        response.stream_to_file(raw_mp3)
+    print(f"NPC voice saved to {raw_mp3}")
 
-    print(f"NPC voice saved to {speech_file_path}")
+    convert_mp3_to_clean_mp3(raw_mp3, final_mp3)
+    print(f"Cleaned NPC voice saved to {final_mp3}")
 
+    """
     return send_file(
         speech_file_path,
         mimetype="audio/mpeg",
         as_attachment=False,
-        download_name="npc_voice.wav"
-    )
-    
+        download_name="npc_voice.mp3"
+    )"""
+
+def convert_mp3_to_clean_mp3(raw_path: Path, clean_path: Path):
+    subprocess.run([
+        "ffmpeg", "-y",                 # -y überschreibt automatisch
+        "-i", str(raw_path),
+        "-acodec", "libmp3lame",
+        "-b:a", "192k",
+        "-ar", "44100",
+        "-ac", "2",
+        str(clean_path)
+    ])
+
 #--------------------------------------------------------------------------------------
 # Serve SoundFile via API
 #-------------------------------------------------------------------------------------- 
 
 @app.route("/api/audio")
 def sound():
-    speech_file_path = Path(__file__).parent / "speech.wav"
+    speech_file_path = Path("C:/UnrealSounds/speech.mp3")
     return send_file(
         speech_file_path,
         mimetype="audio/mpeg",
         as_attachment=False,
-        download_name="npc_voice.wav"
+        download_name="npc_voice.mp3"
     )
 
 #--------------------------------------------------------------------------------------
