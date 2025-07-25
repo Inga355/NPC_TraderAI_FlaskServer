@@ -79,14 +79,15 @@ def build_prompt(player_input):
 
 
 #--------------------------------------------------------------------------------------
-# Build follow-up confirmation prompt after a trade tool call
+# Build follow-up confirmation prompts after a trade tool call
 #--------------------------------------------------------------------------------------
 
 def build_followup_prompt(buy_items, sell_items):
     """
     Builds a prompt to ask the player to confirm trade actions previously parsed.
     """
-    chat_history_followup = get_recent_chat_messages(limit=6)
+    #chat_history_followup = get_recent_chat_messages(limit=6)
+    chat_history_followup_json = format_chat_history_as_json(limit=6)
 
     prompt = f"""
         The player has expressed an intent to buy {buy_items} and sell {sell_items}.
@@ -94,7 +95,7 @@ def build_followup_prompt(buy_items, sell_items):
         If both are empty, do not ask for confirmation. If there are many items, ask for confirmation for each item.
 
         This is the recent conversation with the player. Use it to determine the context about what the player asked for.
-        {chat_history_followup}
+        {chat_history_followup_json}
 
         Make sure to:
         - Ask the question clearly, such as: 'Are you sure you want to buy 5 apples and sell 2 swords? Let's make a deal!'
@@ -102,8 +103,35 @@ def build_followup_prompt(buy_items, sell_items):
     return prompt.strip()
 
 
+def build_consent_or_reintent_prompt(player_input):
+    """
+    Determines whether the player's reply is a confirmation, a changed trade, or an unrelated message.
+    The model must decide whether to call a tool or simply respond in character.
+    """
+    chat_history = format_chat_history_as_json(limit=6)
+
+    prompt = f"""
+    This is your recent chat history with the player. Use it to understand the current intent and conversational flow.
+
+    {chat_history}
+
+    Now the player says: "{player_input}"
+
+    Based on this, decide what to do:
+    - If the message clearly confirms or rejects a previously offered trade, call the tool 'trade_consent'.
+    - If the message modifies the previous trade (different item or quantity), call 'parse_trade_intent'.
+    - If the message refers vaguely to a trade (e.g., 'just 2 please'), infer the missing info from context and call 'parse_trade_intent'.
+    - If the message changes the topic or is unrelated to trading (e.g., weather, mood, compliments, questions), do not call any tool. Just respond naturally in character.
+    """
+    return prompt.strip()
+
+
+
+
 #--------------------------------------------------------------------------------------
 # Infer trade intent heuristically from recent chat messages (still in testing phase)
+
+#   WORK IN PROGRESS
 #--------------------------------------------------------------------------------------
 
 def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
@@ -121,7 +149,7 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
 
     last_player_line = ""
     for line in reversed(lines):
-        if line.startswith("player:") or line.startswith("you:"):
+        if line.startswith("user:") or line.startswith("assistant:"):
             last_player_line = line.split(":", 1)[-1].strip()
             print(f"This is last PlayerLine: {last_player_line}")
             break
@@ -148,3 +176,5 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
 
     return inferred
 
+a = build_prompt("Hello world")
+print(a)
