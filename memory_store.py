@@ -75,7 +75,7 @@ def get_recent_chat_messages(limit=20):
     cursor.execute("""
         SELECT role, text
         FROM chat_history
-        ORDER BY timestamp ASC
+        ORDER BY timestamp DESC
         LIMIT ?
     """, (limit,))
     
