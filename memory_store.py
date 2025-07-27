@@ -55,10 +55,11 @@ def add_memory(text, role):
             VALUES (?, ?, ?)
         """, (timestamp, role, text))
         conn.commit()
+        conn.close()
     except sqlite3.IntegrityError:
-        print("Error: Sqlite IntegrityError occured.")
+        print("Error: Sqlite IntegrityError occurred.")
         
-    print("added to memory")
+    print(f"{role}: added to memory")
 
 
 #--------------------------------------------------------------------------------------
@@ -265,5 +266,3 @@ def get_memories_from_npc(text):
     return results["documents"][0]
 
 
-
-print(get_status_flag())
