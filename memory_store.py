@@ -94,6 +94,55 @@ def get_recent_chat_messages(limit=50):
 
 
 #--------------------------------------------------------------------------------------
+# Status Flag for ongoing Trade
+#--------------------------------------------------------------------------------------
+
+def get_status_flag():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+                SELECT is_active FROM status_flag WHERE id = 1
+                """)
+    except sqlite3.IntegrityError:
+        print("Error: Sqlite IntegrityError occurred.")
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return "No status_flag found."
+
+    is_trade_ongoing = bool(row[0])
+    return is_trade_ongoing
+
+
+def set_status_flag_true():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+            UPDATE status_flag SET is_active = 1 WHERE id = 1
+            """)
+    conn.commit()
+    conn.close()
+    print("Status_flag set to True")
+
+
+def set_status_flag_false():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+            UPDATE status_flag SET is_active = 0 WHERE id = 1
+            """)
+    conn.commit()
+    conn.close()
+    print("Status_flag set to False")
+
+
+#--------------------------------------------------------------------------------------
 # Summarize chat history in chunks using OpenAI adn format into JSON with summaries
 
 # WORK IN PROGRESS!!
@@ -185,6 +234,7 @@ def load_last_trade_results(entity_id=1, db_path="inventory/inventory.sqlite3"):
     return []
 
 
+
 #--------------------------------------------------------------------------------------
 # Retrieve semantic memories from ChromaDB (if enabled)
 
@@ -213,3 +263,7 @@ def get_memories_from_npc(text):
         where={"role": "assistant"}
     )
     return results["documents"][0]
+
+
+
+print(get_status_flag())
