@@ -10,8 +10,8 @@ from openai import OpenAI
 from pathlib import Path
 from agent_tools import tools, parse_trade_intent, trade_consent
 from inventory_store import execute_trade, get_inventory
-from prompt_generator import build_instructions, build_prompt, build_followup_prompt
-from memory_store import add_memory, store_trade_results, load_last_trade_results
+from prompt_generator import build_instructions, build_prompt, build_followup_prompt, build_consent_or_reintent_prompt
+from memory_store import add_memory, store_trade_results, load_last_trade_results, get_status_flag, set_status_flag_true, set_status_flag_false
 import json
 import subprocess
 
@@ -28,6 +28,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route("/npc/chat")
 def home():
+    set_status_flag_false()
     return send_from_directory('testfrontend', 'chatwindow.html')
 
 
