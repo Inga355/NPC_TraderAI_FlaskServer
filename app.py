@@ -17,7 +17,7 @@ import subprocess
 
 
 #--------------------------------------------------------------------------------------
-# Flask App Setup, OpenAI Client and Serve Chat Interface HTML
+# Flask App Setup, OpenAI Client
 #--------------------------------------------------------------------------------------
 
 app = Flask(__name__, static_folder='testfrontend')
@@ -26,24 +26,25 @@ CORS(app)
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
+#--------------------------------------------------------------------------------------
+# Chat Endpoints – Serve Chat Interface HTML, Handles NPC Conversation, Audio and Inventory
+#--------------------------------------------------------------------------------------
+
 @app.route("/npc/chat")
 def home():
     set_status_flag_false()
     return send_from_directory('testfrontend', 'chatwindow.html')
 
 
-#--------------------------------------------------------------------------------------
-# Chat Endpoints – Handles NPC Conversation, Audio and Inventory
-#--------------------------------------------------------------------------------------
-
 @app.route("/npc/chat", methods=["POST"])
 def chat():
     player_message_form = request.form.get("userprompt", "")
     # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-    
-    #data = request.get_json()
-    #player_message_form = data.get("message", "")
-    
+    """
+    data = request.get_json()
+    player_message_form = data.get("message", "")
+    """
     npc_response = npc_chat(player_message_form)
     with open("npc_response.txt", "w") as f:
         f.write(npc_response)
@@ -58,6 +59,21 @@ def chat():
 def get_audio(filename):
     audio_path = Path(filename)
     return send_file(audio_path, mimetype='audio/mpeg')
+
+
+@app.route("/api/audio")
+def sound():
+    speech_file_path = Path("C:/UnrealSounds/speech.mp3")
+    return send_file(
+        speech_file_path,
+        mimetype="audio/mpeg",
+        as_attachment=False,
+        download_name="npc_voice.mp3")
+
+
+@app.route('/api/inventory/<entity_id>', methods=['GET'])
+def api_get_inventory(entity_id):
+    return get_inventory(entity_id)
 
 
 #--------------------------------------------------------------------------------------
@@ -111,7 +127,6 @@ def npc_chat(player_message):
         tool_calls = response.output
         print(f"Standard-Response-Output: {response.output}")  # Debugging
         print(f"Standard-Response-Output-Text: {response.output_text}")  # Debugging
-
 
     # Check if any tool was called
     if tool_calls and isinstance(tool_calls, list):
@@ -223,8 +238,6 @@ def npc_chat(player_message):
     
     # Output without tool call
     else:
-        add_memory(text=response.output_text, role="assistant")
-        print(response.output_text)
         response = response.output_text
         npc_voice_chat(response)
         return response
@@ -233,7 +246,6 @@ def npc_chat(player_message):
         return jsonify({"response": response.output_text})
         """
    
-
 
 #--------------------------------------------------------------------------------------
 # Generate speech from the NPC response and return as audio file
@@ -284,23 +296,13 @@ def convert_mp3_to_clean_mp3(raw_path: Path, clean_path: Path):
 # Serve SoundFile via API
 #-------------------------------------------------------------------------------------- 
 
-@app.route("/api/audio")
-def sound():
-    speech_file_path = Path("C:/UnrealSounds/speech.mp3")
-    return send_file(
-        speech_file_path,
-        mimetype="audio/mpeg",
-        as_attachment=False,
-        download_name="npc_voice.mp3"
-    )
+
 
 #--------------------------------------------------------------------------------------
 # Serve Inventory via API
 #-------------------------------------------------------------------------------------- 
 
-@app.route('/api/inventory/<entity_id>', methods=['GET'])
-def api_get_inventory(entity_id):
-    return get_inventory(entity_id)
+
 
 
 #--------------------------------------------------------------------------------------
