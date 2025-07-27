@@ -249,6 +249,7 @@ def npc_chat(player_message):
 
 #--------------------------------------------------------------------------------------
 # Generate speech from the NPC response and return as audio file
+# (Hardcoded for now, will be updated later to handle multiple NPC)
 #--------------------------------------------------------------------------------------
 
 def npc_voice_chat(npc_response):
@@ -283,7 +284,7 @@ def npc_voice_chat(npc_response):
 
 def convert_mp3_to_clean_mp3(raw_path: Path, clean_path: Path):
     subprocess.run([
-        "ffmpeg", "-y",                 # -y überschreibt automatisch
+        "ffmpeg", "-y",
         "-i", str(raw_path),
         "-acodec", "libmp3lame",
         "-b:a", "192k",
@@ -291,18 +292,6 @@ def convert_mp3_to_clean_mp3(raw_path: Path, clean_path: Path):
         "-ac", "2",
         str(clean_path)
     ])
-
-#--------------------------------------------------------------------------------------
-# Serve SoundFile via API
-#-------------------------------------------------------------------------------------- 
-
-
-
-#--------------------------------------------------------------------------------------
-# Serve Inventory via API
-#-------------------------------------------------------------------------------------- 
-
-
 
 
 #--------------------------------------------------------------------------------------
