@@ -53,6 +53,7 @@ def chat():
         "audio_url": url_for('get_audio', filename=audio_path.name, _external=True)
     })
 
+
 @app.route('/api/audio/<filename>')
 def get_audio(filename):
     audio_path = Path(filename)
@@ -70,23 +71,11 @@ def npc_chat(player_message):
         return "Please provide a message", 400
     
     add_memory(text=player_message, role="user")
-
+    is_trade_ongoing = get_status_flag()
     role_instruction = build_instructions()
-    message = build_prompt(player_message)
 
-    # Generate AI response
-    response = client.responses.create(
-        model="gpt-4o",
-        instructions=role_instruction,
-        input=message,
-        tools=tools,
-        tool_choice="auto"
-    )
-    add_memory(text=(response.output_text), role="assistant")
-    
     # Process the response and any tool calls
-    print(response.output) # Debugging
-    tool_calls = response.output
+    tool_calls = ""
     results = []
     last_tool_used = []
     trade_state = None
@@ -94,15 +83,46 @@ def npc_chat(player_message):
     sell_items = []
     consent_result = []
 
+    # Generate AI response depending on weather a trade is ongoing or not
+    if not is_trade_ongoing:
+        standard_prompt = build_prompt(player_message)
+        response = client.responses.create(
+            model="gpt-4o",
+            instructions=role_instruction,
+            input=standard_prompt,
+            tools=tools,
+            tool_choice="auto"
+        )
+        add_memory(text=response.output_text, role="assistant")
+        tool_calls = response.output
+        print(f"Standard-Response-Output: {response.output}")  # Debugging
+        print(f"Standard-Response-Output-Text: {response.output_text}")  # Debugging
+
+    elif is_trade_ongoing:
+        consent_prompt = build_consent_or_reintent_prompt(player_message)
+        response = client.responses.create(
+            model="gpt-4o",
+            instructions=role_instruction,
+            input=consent_prompt,
+            tools=tools,
+            tool_choice="auto"
+        )
+        add_memory(text=response.output_text, role="assistant")
+        tool_calls = response.output
+        print(f"Standard-Response-Output: {response.output}")  # Debugging
+        print(f"Standard-Response-Output-Text: {response.output_text}")  # Debugging
+
+
     # Check if any tool was called
     if tool_calls and isinstance(tool_calls, list):
         for tool_call in tool_calls:
             if hasattr(tool_call, "arguments"):
                 try:
                     args = json.loads(tool_call.arguments)
-                    
+
                     # Process tool call for trade intent
                     if tool_call.name == "parse_trade_intent":
+                        set_status_flag_true()
                         trade_state = args["trade_state"]
                         item = args["item"]
                         quantity = args["quantity"]
@@ -112,14 +132,14 @@ def npc_chat(player_message):
                         last_tool_used = "parse_trade_intent"
 
                         if result["trade_state"] == "buy":
-                            buy_items.append(result)       
+                            buy_items.append(result)
                         elif result["trade_state"] == "sell":
                             sell_items.append(result)
 
                         # Debugging
                         print(f"\033[94mResults: {results}\033[0m")
                         print(f"\033[94mBuy Items: {buy_items}\033[0m")
-                        print(f"\033[94mSell Items: {sell_items}\033[0m")    
+                        print(f"\033[94mSell Items: {sell_items}\033[0m")
                     
                     # Process tool call for trade consent
                     elif tool_call.name == "trade_consent":
@@ -137,7 +157,7 @@ def npc_chat(player_message):
                 print("Tool call without arguments field detected!")
    
     # Followup after tool parse_trade_intent
-    if last_tool_used == "parse_trade_intent" and results:  
+    if last_tool_used == "parse_trade_intent" and results:
         followup_prompt = build_followup_prompt(buy_items, sell_items)
 
         # New API call to execute confirmation call
@@ -155,7 +175,7 @@ def npc_chat(player_message):
         """
         return jsonify({"response": response_text})
         """
-    
+
     # Followup after tool trade_consent
     if last_tool_used == "trade_consent" and consent_result:
         player_consent = consent_result["Consent"]
@@ -173,7 +193,8 @@ def npc_chat(player_message):
                 confirmations.append(message)
             npc_text_yes = "\n".join(confirmations) + "\nPleasure doing business, matey!"
             print(f"TTS INPUT: {npc_text_yes}")
-            npc_voice_chat(npc_text_yes)    
+            npc_voice_chat(npc_text_yes)
+            set_status_flag_false()
             return npc_text_yes
             # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
             """
@@ -183,6 +204,7 @@ def npc_chat(player_message):
         elif player_consent == "no":
             npc_text_no = "Understood. The trade has been cancelled."
             npc_voice_chat(npc_text_no)
+            set_status_flag_false()
             return npc_text_no
             # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
             """
@@ -192,6 +214,7 @@ def npc_chat(player_message):
         elif player_consent == "unsure":
             npc_text_unsure = "I'm not sure if you're ready to trade. Let me know when you are!"
             npc_voice_chat(npc_text_unsure)
+            set_status_flag_false()
             return npc_text_unsure
             # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
             """
@@ -200,6 +223,7 @@ def npc_chat(player_message):
     
     # Output without tool call
     else:
+        add_memory(text=response.output_text, role="assistant")
         print(response.output_text)
         response = response.output_text
         npc_voice_chat(response)
