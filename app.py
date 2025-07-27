@@ -33,7 +33,7 @@ def home():
 
 
 #--------------------------------------------------------------------------------------
-# Main Chat Endpoint – Handles NPC Conversation and Tool Responses
+# Chat Endpoints – Handles NPC Conversation, Audio and Inventory
 #--------------------------------------------------------------------------------------
 
 @app.route("/npc/chat", methods=["POST"])
@@ -249,7 +249,11 @@ def npc_voice_chat(npc_response):
         voice="ash",
         input=text_to_speech,
         response_format="mp3",
-        instructions="Speak like a snarky pirate.",
+        instructions=(
+                "Speak like a grumpy old pirate with a gravelly, raspy voice, "
+                "lots of growls and exaggerated pirate slang. Sound rough, sarcastic, "
+                "and like you've been chewing salt and shouting over stormy seas for 40 years."
+        ),
     ) as response:
         response.stream_to_file(raw_mp3)
     print(f"NPC voice saved to {raw_mp3}")
