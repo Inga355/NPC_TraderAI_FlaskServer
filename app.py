@@ -238,9 +238,9 @@ def npc_chat(player_message):
     
     # Output without tool call
     else:
-        response = response.output_text
-        npc_voice_chat(response)
-        return response
+        npc_text = response.output_text
+        npc_voice_chat(npc_text)
+        return npc_text
         # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
         """
         return jsonify({"response": response.output_text})
