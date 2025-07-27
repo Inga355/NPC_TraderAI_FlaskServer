@@ -176,5 +176,3 @@ def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
 
     return inferred
 
-a = build_prompt("Hello world")
-print(a)
