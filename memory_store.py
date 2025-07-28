@@ -55,17 +55,18 @@ def add_memory(text, role):
             VALUES (?, ?, ?)
         """, (timestamp, role, text))
         conn.commit()
+        conn.close()
     except sqlite3.IntegrityError:
-        print("Error: Sqlite IntegrityError occured.")
+        print("Error: Sqlite IntegrityError occurred.")
         
-    print("added to memory")
+    print(f"{role}: added to memory")
 
 
 #--------------------------------------------------------------------------------------
 # Retrieve recent chat messages from DB
 #--------------------------------------------------------------------------------------
 
-def get_recent_chat_messages(limit=20):
+def get_recent_chat_messages(limit=50):
     """
     Retrieves the last N messages from chat history.
     """
@@ -74,10 +75,15 @@ def get_recent_chat_messages(limit=20):
 
     cursor.execute("""
         SELECT role, text
-        FROM chat_history
+        FROM (
+            SELECT role, text, timestamp
+            FROM chat_history
+            WHERE role IN ('user', 'assistant') AND TRIM(text) <> ''
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ) AS sub
         ORDER BY timestamp ASC
-        LIMIT ?
-    """, (limit,))
+        """, (limit,))
     
     rows = cursor.fetchall()
     conn.close()
@@ -89,7 +95,58 @@ def get_recent_chat_messages(limit=20):
 
 
 #--------------------------------------------------------------------------------------
+# Status Flag for ongoing Trade
+#--------------------------------------------------------------------------------------
+
+def get_status_flag():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+                SELECT is_active FROM status_flag WHERE id = 1
+                """)
+    except sqlite3.IntegrityError:
+        print("Error: Sqlite IntegrityError occurred.")
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return "No status_flag found."
+
+    is_trade_ongoing = bool(row[0])
+    return is_trade_ongoing
+
+
+def set_status_flag_true():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+            UPDATE status_flag SET is_active = 1 WHERE id = 1
+            """)
+    conn.commit()
+    conn.close()
+    print("Status_flag set to True")
+
+
+def set_status_flag_false():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+            UPDATE status_flag SET is_active = 0 WHERE id = 1
+            """)
+    conn.commit()
+    conn.close()
+    print("Status_flag set to False")
+
+
+#--------------------------------------------------------------------------------------
 # Summarize chat history in chunks using OpenAI adn format into JSON with summaries
+
+# WORK IN PROGRESS!!
 #--------------------------------------------------------------------------------------
 
 def summarize_chat_history(chat_messages, summary_interval=5):
@@ -121,11 +178,11 @@ def format_chat_history_as_json(limit=20, summary_interval=5):
     Returns chat history and summaries as JSON.
     """
     chat_messages = get_recent_chat_messages(limit)
-    summarized_messages = summarize_chat_history(chat_messages, summary_interval)
+    #summarized_messages = summarize_chat_history(chat_messages, summary_interval)
 
     chat_data = [
         {"role": "system", "content": "You are a helpful assistant. Here's a summary of the recent conversation."},
-        *summarized_messages
+        *chat_messages
     ]
 
     return json.dumps(chat_data, indent=2)
@@ -178,8 +235,11 @@ def load_last_trade_results(entity_id=1, db_path="inventory/inventory.sqlite3"):
     return []
 
 
+
 #--------------------------------------------------------------------------------------
 # Retrieve semantic memories from ChromaDB (if enabled)
+
+# WORK IN PROGRESS
 #--------------------------------------------------------------------------------------
 
 def get_memories_from_player(text):
@@ -204,3 +264,5 @@ def get_memories_from_npc(text):
         where={"role": "assistant"}
     )
     return results["documents"][0]
+
+
