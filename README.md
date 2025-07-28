@@ -80,7 +80,7 @@ Then open [http://localhost:5000/npc/chat](http://localhost:5000/npc/chat) in yo
 
 ### `GET /api/inventory/<entity_id>`
 
-* Returns inventory of specified player or NPC
+* Returns inventory of specified player or NPC (use "2" for testing)
 
 ---
 
@@ -132,7 +132,7 @@ For example, in **Unreal Engine 5**, you can:
 Integration requires:
 
 * A running Flask backend (this project)
-* UE5 Blueprint logic for requests and UI binding
+* UE5 Blueprint or C++ logic for requests and UI binding
 
 🧩 The backend is decoupled and can be used in any engine supporting HTTP communication.
 
