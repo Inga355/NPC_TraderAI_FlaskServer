@@ -29,6 +29,7 @@ This project implements a dynamic NPC trading system for role-playing games usin
 | Database   | SQLite                  |
 | Embeddings | ChromaDB (*test phase*) |
 | Frontend   | Plain HTML + JS         |
+| GameEngine | Unreal Engine 5.6       |
 
 ---
 
