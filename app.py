@@ -220,10 +220,6 @@ def npc_chat(player_message):
         npc_voice_chat(npc_text)
         print("\033[93mFollow-up GPT Output:\033[0m", followup_response.output) # Debugging
         return npc_text
-        # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-        """
-        return jsonify({"response": response_text})
-        """
 
     # If consent was given → confirm or cancel trade
     if last_tool_used == "trade_consent" and consent_result:
@@ -246,10 +242,6 @@ def npc_chat(player_message):
             set_status_flag_false()
             print(f"TTS INPUT: {npc_text_yes}")
             return npc_text_yes
-            # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-            """
-            return jsonify({"response": "\n".join(confirmations) + "\nPleasure doing business, matey!"})
-            """
 
         elif player_consent == "no":
             npc_text_no = "Understood. The trade has been cancelled."
@@ -257,10 +249,6 @@ def npc_chat(player_message):
             npc_voice_chat(npc_text_no)
             set_status_flag_false()
             return npc_text_no
-            # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-            """
-            return jsonify({"response": "Understood. The trade has been cancelled."})
-            """
 
         elif player_consent == "unsure":
             npc_text_unsure = "I'm not sure if you're ready to trade. Let me know when you are!"
@@ -268,21 +256,13 @@ def npc_chat(player_message):
             npc_voice_chat(npc_text_unsure)
             set_status_flag_false()
             return npc_text_unsure
-            # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-            """
-            return jsonify({"response": "I'm not sure if you're ready to trade. Let me know when you are!"})
-            """
-    
+
     # Step 4: Default return if no tools were triggered
     else:
         npc_text = response.output_text
         npc_voice_chat(npc_text)
         return npc_text
-        # Uncomment if you want to use HTTP request in UE5 (still in testing phase)
-        """
-        return jsonify({"response": response.output_text})
-        """
-   
+
 
 #--------------------------------------------------------------------------------------
 # Generate speech from the NPC response and return as audio file
@@ -290,6 +270,15 @@ def npc_chat(player_message):
 #--------------------------------------------------------------------------------------
 
 def npc_voice_chat(npc_response):
+    """
+    Generates a gravelly pirate-style voice from NPC text, saves raw output,
+    cleans it with ffmpeg, and stores final MP3 in specified location.
+    :param npc_response: The NPC's response text to be spoken.
+    side effects:
+        - Saves raw speech output as 'speech.mp3' in local directory.
+        - Converts and saves cleaned MP3 to 'C:/UnrealSounds/speech.mp3'.
+        - Prints file save confirmations.
+    """
     raw_mp3 = Path(__file__).parent / "speech.mp3"
     final_mp3 = Path("C:/UnrealSounds/speech.mp3")
     text_to_speech = npc_response
@@ -320,6 +309,14 @@ def npc_voice_chat(npc_response):
     )"""
 
 def convert_mp3_to_clean_mp3(raw_path: Path, clean_path: Path):
+    """
+    Converts a raw MP3 audio file to a cleaner version using ffmpeg,
+    optimizing bitrate and audio quality for consistent playback.
+    :param raw_path: Path to the unprocessed MP3 file.
+    :param clean_path: Path to save the cleaned MP3 file.
+    side effects:
+        - Runs ffmpeg subprocess to re-encode the audio file.
+    """
     subprocess.run([
         "ffmpeg", "-y",
         "-i", str(raw_path),
