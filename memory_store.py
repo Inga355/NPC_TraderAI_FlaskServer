@@ -20,7 +20,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 db_path = "inventory/inventory.sqlite3"
 
-# Uncomment if ChromaDB is enabled (semantic chat history, still in testing phase)
+# Uncomment this block if ChromaDB is enabled (semantic chat history, still in testing phase)
 """
 client = chromadb.PersistentClient(path="vectordb")
 collection = client.get_or_create_collection(name="test3")
@@ -28,14 +28,21 @@ collection = client.get_or_create_collection(name="test3")
 
 
 #--------------------------------------------------------------------------------------
-# Store player and assistant messages to chat history
+# Store messages to chat history
 #--------------------------------------------------------------------------------------
 
-def add_memory(text, role):
+def add_memory(text, role, db_path="inventory/inventory.sqlite3"):
     """
-    Stores a message and its role ('user' or 'assistant') in the chat history table.
+    Stores a message from the chat in the SQLite database, along with its role and timestamp.
+    :param text: (str) Message content to store.
+    :param role: (str) Sender role, typically 'user','assistant' or 'system'.
+    :param db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: None
+    Notes:
+        - Optional semantic storage via ChromaDB can be enabled (commented out).
+        - Timestamp is automatically assigned during insertion.
     """
-    # Uncomment if ChromaDB is enabled (semantic chat history, still in testing phase)
+    # Uncomment this block if ChromaDB is enabled (semantic chat history, still in testing phase)
     """
     id = str(uuid.uuid4())
     collection.add(
@@ -44,7 +51,6 @@ def add_memory(text, role):
         ids=[id]
     )
     """
-
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     timestamp = str(datetime.now())
@@ -63,12 +69,17 @@ def add_memory(text, role):
 
 
 #--------------------------------------------------------------------------------------
-# Retrieve recent chat messages from DB
+# Retrieve recent chat messages from DataBase
 #--------------------------------------------------------------------------------------
 
-def get_recent_chat_messages(limit=50):
+def get_recent_chat_messages(limit=50, db_path="inventory/inventory.sqlite3"):
     """
-    Retrieves the last N messages from chat history.
+    Fetches the most recent chat exchanges between user and assistant,
+    sorted chronologically for conversational context reconstruction.
+    :param limit: (int, optional) Number of chat messages to retrieve. Defaults to 50.
+    :param db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: list[dict] | str: List of message dictionaries containing role and content,
+            or a message string if no records are found.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -98,7 +109,13 @@ def get_recent_chat_messages(limit=50):
 # Status Flag for ongoing Trade
 #--------------------------------------------------------------------------------------
 
-def get_status_flag():
+def get_status_flag(db_path="inventory/inventory.sqlite3"):
+    """
+    Retrieves the current trade status flag from the database.
+    :param db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: bool | str: Returns True if a trade is ongoing (is_active == 1),
+            False if no active trade, or a message string if no flag record is found.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -119,7 +136,12 @@ def get_status_flag():
     return is_trade_ongoing
 
 
-def set_status_flag_true():
+def set_status_flag_true(db_path="inventory/inventory.sqlite3"):
+    """
+    Activates the trade status flag in the database.
+    :param db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: None
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -131,7 +153,12 @@ def set_status_flag_true():
     print("Status_flag set to True")
 
 
-def set_status_flag_false():
+def set_status_flag_false(db_path="inventory/inventory.sqlite3"):
+    """
+    Deactivates the trade status flag in the database.
+    :param db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: None
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -141,6 +168,63 @@ def set_status_flag_false():
     conn.commit()
     conn.close()
     print("Status_flag set to False")
+
+
+#--------------------------------------------------------------------------------------
+# Store and retrieve last trade results for confirmation after tool call parse_trade_intent
+#--------------------------------------------------------------------------------------
+
+def store_trade_results(results, entity_id=1, db_path="inventory/inventory.sqlite3"):
+    """
+    Stores parsed trade results in the chat_history table of the database.
+    The results are serialized as JSON and saved as a system message
+    associated with the given entity_id. This is used to log the output
+    of trade parsing operations and enable later retrieval for confirmation.
+    :param results: (list or dict) Parsed trade data, typically a list of trade dicts.
+    :param entity_id: (int) Identifier for the trade entity or user (default is 1).
+    :param db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: Confirmation message indicating successful storage.
+    """
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO chat_history (timestamp, entity_id, role, text)
+        VALUES (?, ?, ?, ?)
+    """, (datetime.now(), entity_id, "system", json.dumps(results)))
+
+    conn.commit()
+    conn.close()
+    return "Results saved."
+
+
+def load_last_trade_results(entity_id=1, db_path="inventory/inventory.sqlite3"):
+    """
+    Retrieves the most recent valid trade results from chat_history for a given entity.
+    :param entity_id: (int) Identifier for the trade entity or user (default is 1).
+    :param db_path: db_path: (str, optional) Path to SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: (list) Parsed trade results if found, otherwise an empty list.
+    """
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT text FROM chat_history
+        WHERE entity_id = ? AND role = 'system'
+        ORDER BY id DESC LIMIT 10
+    """, (entity_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    for (text,) in rows:
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list) and all("trade_state" in r for r in parsed):
+                return parsed
+        except json.JSONDecodeError:
+            continue
+
+    return []
 
 
 #--------------------------------------------------------------------------------------
@@ -189,57 +273,9 @@ def format_chat_history_as_json(limit=20, summary_interval=5):
 
 
 #--------------------------------------------------------------------------------------
-# Store and retrieve last trade results for confirmation after tool call parse_trade_intent
-#--------------------------------------------------------------------------------------
-
-def store_trade_results(results, entity_id=1, db_path="inventory/inventory.sqlite3"):
-    """
-    Saves parsed trade result data as system messages in chat_history.
-    """
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO chat_history (timestamp, entity_id, role, text)
-        VALUES (?, ?, ?, ?)
-    """, (datetime.now(), entity_id, "system", json.dumps(results)))
-
-    conn.commit()
-    conn.close()
-    return "Results saved."
-
-
-def load_last_trade_results(entity_id=1, db_path="inventory/inventory.sqlite3"):
-    """
-    Loads last valid trade result stored as system messages.
-    """
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT text FROM chat_history
-        WHERE entity_id = ? AND role = 'system'
-        ORDER BY id DESC LIMIT 10
-    """, (entity_id,))
-    rows = cursor.fetchall()
-    conn.close()
-
-    for (text,) in rows:
-        try:
-            parsed = json.loads(text)
-            if isinstance(parsed, list) and all("trade_state" in r for r in parsed):
-                return parsed
-        except json.JSONDecodeError:
-            continue
-
-    return []
-
-
-
-#--------------------------------------------------------------------------------------
 # Retrieve semantic memories from ChromaDB (if enabled)
 
-# WORK IN PROGRESS
+# WORK IN PROGRESS!!
 #--------------------------------------------------------------------------------------
 
 def get_memories_from_player(text):

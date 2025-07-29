@@ -4,7 +4,13 @@
 
 def parse_trade_intent(trade_state: str="no trade", item: str="null", quantity: int=0):
     """
-    Parses trade intent and normalizes item name.
+    Parses and formats trade intent by sanitizing item name and organizing trade data.
+    :param trade_state: Description of the trade status or action (e.g., "buy", "sell", "no trade").
+    :param item: Name of the item involved in the trade.
+    :param quantity: Number of items intended for trade.
+    :return: A dictionary containing cleaned item name (singular), trade state, and quantity.
+    side effects:
+        - Prints a green-highlighted debug message to console for tracking.
     """
     item = item.lower()
     if item.endswith('s'):
@@ -15,7 +21,11 @@ def parse_trade_intent(trade_state: str="no trade", item: str="null", quantity: 
 
 def trade_consent(consent: str='unsure'):
     """
-    Handles consent responses from player for trade confirmation.
+    Processes player response regarding trade consent and prepares a standardized output.
+    :param consent: Player's decision about the trade ('yes', 'no', or 'unsure').
+    :return: Dictionary containing the player's consent decision under key 'Consent'.
+    side effects:
+        - Prints a green-highlighted debug message to console for tracking.
     """
     print("\033[92mFunction trade_consent called!\033[0m")
     return {"Consent": consent}
