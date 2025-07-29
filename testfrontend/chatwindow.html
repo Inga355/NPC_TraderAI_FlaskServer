@@ -135,29 +135,33 @@
 
         function addNpcMessage(text, audioUrl) {
             const messagesDiv = document.getElementById('chatMessages');
-
+            
+            // Remove old Button
             const oldButtons = messagesDiv.querySelectorAll('.play-button');
             oldButtons.forEach(btn => btn.remove());
 
+            // Display NPC Response
             const messageDiv = document.createElement('div');
             messageDiv.className = `message npc-message`;
             messageDiv.textContent = text;
 
             messagesDiv.appendChild(messageDiv);
 
+            // Disply Audio Button & Cache Busting
             if (audioUrl) {
-                const playBtn = document.createElement('button');
-                playBtn.textContent = '🔊 Audio abspielen';
-                playBtn.className = 'play-button';
-                playBtn.onclick = () => {
-                    const audio = new Audio(audioUrl);
-                    audio.play();
-                };
-                messagesDiv.appendChild(playBtn);
+                setTimeout(() => {
+                    const playBtn = document.createElement('button');
+                    playBtn.textContent = '🔊 Play Audio';
+                    playBtn.className = 'play-button';
+                    playBtn.onclick = () => {
+                        const audio = new Audio(`${audioUrl}?t=${Date.now()}`);
+                        audio.play();
+                    };
+                    messagesDiv.appendChild(playBtn);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }, 1600); //wait 1600ms
             }
-
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+        }    
     </script>
 </body>
 </html>
