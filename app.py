@@ -236,7 +236,7 @@ def npc_chat(player_message):
                 quantity = result["quantity"]
                 message = execute_trade(trade_state, item_name, quantity)
                 confirmations.append(message)
-            npc_text_yes = "\n".join(confirmations) + "\nPleasure doing business, matey!"
+            npc_text_yes = "\n".join(confirmations)
             add_memory(text=npc_text_yes, role="assistant")
             npc_voice_chat(npc_text_yes)
             set_status_flag_false()

@@ -196,19 +196,19 @@ def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_pa
         npc_stock = get_quantity(npc_id)
         if npc_stock < quantity:
             conn.close()
-            return f"Arrr, I only got {npc_stock} {item_name}(s) in me stash!"
+            return f"Arrr, I only got {npc_stock} {item_name}(s) in me stash! Pick somethin' else!"
 
         update_inventory(npc_id, -quantity)
         update_inventory(player_id, quantity)
         conn.commit()
         conn.close()
-        return f"Ye bought {quantity} {item_name}(s) for {total_price:.2f} gold."
+        return f"Ye bought {quantity} {item_name}(s) for {total_price:.2f} gold. Pleasure doing business, matey!"
 
     elif trade_state == "sell":
         player_stock = get_quantity(player_id)
         if player_stock < quantity:
             conn.close()
-            return f"Ye trying to cheat me? Ye only got {player_stock} {item_name}(s)!"
+            return f"Ye trying to cheat me? Ye only got {player_stock} {item_name}(s)! Don’t play tricks on me!"
 
         update_inventory(player_id, -quantity)
         update_inventory(npc_id, quantity)
