@@ -12,9 +12,14 @@ from memory_store import format_chat_history_as_json, get_recent_chat_messages
 # Build role-specific instruction prompt for the LLM
 #--------------------------------------------------------------------------------------
 
-def build_instructions(id=1): # id hardcoded for now, will be changed to dynamic later
+def build_instructions(id=1): #can be changed to serve multiple NPC
     """
-    Returns a string of system-level instructions defining the NPC's name, role, and behavior.
+    Constructs a system-level instruction string that defines the NPC’s identity and behavior.
+    The instruction embeds the NPC's name and role, and includes rules that ensure
+    consistent, immersive interaction with the player. It guides the language model
+    to remain in character, use memory contextually, and invoke tools based on player intent.
+    :param id: (int) Identifier used to fetch the NPC's name and role (currently default to 1).
+    :return: (str) Instruction string used as a system prompt for the language model.
     """
     npc_name = get_entity_name(id)
     npc_role = get_entity_role(id)
@@ -38,10 +43,16 @@ def build_instructions(id=1): # id hardcoded for now, will be changed to dynamic
 
 def build_prompt(player_input):
     """
-    Creates a prompt including chat memory and NPC inventory, formatted for OpenAI input.
+    Creates a dynamic prompt that includes recent chat history and current NPC inventory.
+    This prompt establishes context for the NPC's response by:
+    - Incorporating the latest chat memory
+    - Listing available items for trade
+    - Embedding behavioral goals and tool usage instructions
+    :param player_input: (str) The latest player message to be addressed.
+    :return: (str) Fully formatted prompt string for LLM input.
     """
 
-    # Uncomment if ChromaDB is enabled (semantic chat history, still in testing phase)
+    # Uncomment this block if ChromaDB is enabled (semantic chat history, still in testing phase)
     """
     memories_player = get_memories_from_player(player_input)
     memories_npc = get_memories_from_npc(player_input)
@@ -84,9 +95,13 @@ def build_prompt(player_input):
 
 def build_followup_prompt(buy_items, sell_items):
     """
-    Builds a prompt to ask the player to confirm trade actions previously parsed.
+    Generates a follow-up prompt to confirm player trade intentions after parsing.
+    The prompt adapts its confirmation questions based on the parsed buy/sell data
+    and uses recent chat history for contextual awareness.
+    :param buy_items: (list or str) Items the player intends to buy.
+    :param sell_items: (list or str) Items the player intends to sell.
+    :return: (str) Prompt asking the player to confirm or revise the intended trade.
     """
-    #chat_history_followup = get_recent_chat_messages(limit=6)
     chat_history_followup_json = format_chat_history_as_json(limit=6)
 
     prompt = f"""
@@ -105,8 +120,13 @@ def build_followup_prompt(buy_items, sell_items):
 
 def build_consent_or_reintent_prompt(player_input):
     """
-    Determines whether the player's reply is a confirmation, a changed trade, or an unrelated message.
-    The model must decide whether to call a tool or simply respond in character.
+    Constructs a prompt to determine the appropriate system action based on the player's latest message.
+    The decision tree enables the model to:
+    - Confirm or reject trades via 'trade_consent'
+    - Parse new trade intents via 'parse_trade_intent'
+    - Ignore tool calls if the message is off-topic
+    :param player_input: (str) The latest message from the player.
+    :return: (str) Contextual prompt guiding model behavior.
     """
     chat_history = format_chat_history_as_json(limit=6)
 
@@ -126,12 +146,10 @@ def build_consent_or_reintent_prompt(player_input):
     return prompt.strip()
 
 
-
-
 #--------------------------------------------------------------------------------------
 # Infer trade intent heuristically from recent chat messages (still in testing phase)
 
-#   WORK IN PROGRESS
+#  WORK IN PROGRESS!!
 #--------------------------------------------------------------------------------------
 
 def infer_trade_items(inventory: Dict[str, int]) -> Dict[str, int]:
