@@ -14,7 +14,12 @@ from flask import jsonify
 
 def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
     """
-    Returns a formatted string listing all items, quantities, and prices in the inventory of the given entity.
+    Retrieves all inventory items for a specific entity from a SQLite database
+    and returns a formatted string listing item names, quantities, and prices.
+    :param entity_id: The unique identifier of the entity whose inventory should be fetched.
+    :param db_path:  File path to the SQLite database containing inventory data.
+    :return:  A human-readable summary of the entity's inventory,
+             or a message indicating an empty or missing inventory.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -52,7 +57,11 @@ def get_all_items(entity_id, db_path="inventory/inventory.sqlite3"):
 
 def insert_item(name, description="", db_path="inventory/inventory.sqlite3"):
     """
-    Inserts a new item into the items table.
+    Inserts a new item into the 'items' table of the SQLite inventory database.
+    :param name: (str) Name of the item to be added.
+    :param description: (str, optional) Optional item description. Defaults to an empty string.
+    :param db_path: (str, optional) File path to the SQLite database. Defaults to 'inventory/inventory.sqlite3'.
+    :return: Success message if insert succeeds, or error message if item already exists.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -76,7 +85,10 @@ def insert_item(name, description="", db_path="inventory/inventory.sqlite3"):
 
 def get_entity_name(id, db_path="inventory/inventory.sqlite3"):
     """
-    Retrieves the name of the entity with the given ID.
+    Fetches the name of an entity from the database using its unique ID.
+    :param id: (int) The identifier of the entity whose name should be retrieved.
+    :param db_path: (str, optional) File path to the SQLite database. Defaults to 'inventory/inventory.sqlite3'.
+    :return: Entity name if found, or a message indicating missing data or nonexistent entity.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -97,7 +109,10 @@ def get_entity_name(id, db_path="inventory/inventory.sqlite3"):
 
 def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
     """
-    Retrieves the role of the entity with the given ID.
+    Retrieves the role of a specified entity from the database using its ID.
+    :param id: (int) The identifier of the entity whose role should be retrieved.
+    :param db_path: (str, optional) File path to the SQLite database. Defaults to 'inventory/inventory.sqlite3'.
+    :return: Entity role if found, or a message indicating missing role or nonexistent entity.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -122,7 +137,19 @@ def get_entity_role(id, db_path="inventory/inventory.sqlite3"):
 
 def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_path="inventory/inventory.sqlite3"):
     """
-    Executes the trade by updating inventory quantities and returns confirmation message.
+    Executes a trade transaction (buy or sell) between player and NPC,
+    adjusting inventory quantities and returning a themed confirmation message.
+    :param trade_state: (str) Type of trade action, either 'buy' or 'sell'.
+    :param item_name: (str) Name of the item being traded.
+    :param quantity: (int) Number of items involved in the trade.
+    :param player_id: (int, optional): Database ID of the player entity. Defaults to 2.
+    :param npc_id: (int, optional) Database ID of the NPC entity. Defaults to 1.
+    :param db_path: (str, optional) Path to the SQLite database file. Defaults to 'inventory/inventory.sqlite3'.
+    :return: str: Pirate-style confirmation message describing the outcome of the trade.
+    Notes:
+        - Uses helper functions `get_quantity()` and `update_inventory()` internally.
+        - Prevents negative stock and ensures minimum quantity is zero.
+        - Returns playful pirate slang for immersive feedback. Should be changed to neutral speech for multiple NPC.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -200,7 +227,12 @@ def execute_trade(trade_state, item_name, quantity, player_id=2, npc_id=1, db_pa
 
 def get_inventory(entity_id, db_path="inventory/inventory.sqlite3"):
     """
-    Returns the inventory of an entity in JSON format.
+    Retrieves the inventory of a specific entity from the database and returns it
+    as a structured JSON response, suitable for use in web APIs.
+    :param entity_id: (int) Unique identifier of the entity whose inventory is requested.
+    :param db_path: (str, optional) File path to the SQLite database. Defaults to 'inventory/inventory.sqlite3'.
+    :return: Flask-style `jsonify()` object containing the inventory details
+            or an error message with HTTP status code 404 if no inventory is found.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
